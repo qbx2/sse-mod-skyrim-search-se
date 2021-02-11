@@ -1,15 +1,21 @@
-mod log;
+#![feature(try_blocks)]
+#![feature(try_trait)]
 
-use std::ffi::{c_void, CString, CStr};
+mod log;
+mod console;
+mod form;
+mod patch;
+mod db;
+
+use winapi::ctypes::c_void;
 use win_dbg_logger::output_debug_string;
 use std::fmt::{Debug, Formatter};
 use std::{fmt, ptr};
 use winapi::um::libloaderapi::GetModuleHandleA;
-use detour::static_detour;
-use std::intrinsics::transmute;
 use std::os::raw::c_char;
 use crate::log::get_log;
 use std::io::Write;
+use anyhow::Context;
 
 type PluginHandle = u32;
 
@@ -54,6 +60,7 @@ pub extern fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo
     let mut info = unsafe { &mut *info };
 
     if skse.runtime_version != 0x01050610 { // 1.5.97
+        output_debug_string(format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str());
         return false;
     }
 
@@ -63,63 +70,27 @@ pub extern fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo
     return true;
 }
 
-static_detour! {
-    static ProcessConsoleInput: fn(*const c_void, i64, i64, i64) -> i64;
-}
-
-fn new_process_console_input(param1: *const c_void, param2: i64, param3: i64, param4: i64) -> i64 {
-    let input = unsafe {
-        CStr::from_ptr(*(param1.offset(0x38) as *const *const c_char)).to_str().unwrap()
-    };
-    print(format!("this is test; input = {}", input)).ok();
-    return ProcessConsoleInput.call(param1, param2, param3, param4);
-}
-
-static mut CONSOLE_CONTEXT: Option<*const *const c_void> = None;
-static mut PRINT_TO_CONSOLE: Option<fn(*const c_void, *const c_char) -> ()> = None;
-
-fn print<T: Into<Vec<u8>>>(msg: T) -> Result<(), Box<dyn std::error::Error>> {
-    let msg = String::from_utf8(msg.into())?;
-    output_debug_string(msg.as_str());
-    let msg = CString::new(msg)?;
-    unsafe {
-        if let Some(print_to_console) = PRINT_TO_CONSOLE {
-            if let Some(console_context) = CONSOLE_CONTEXT {
-                if *console_context != ptr::null() {
-                    print_to_console(*console_context, msg.as_c_str().as_ptr());
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
 #[no_mangle]
 pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
     let skse = unsafe { &*skse };
     let log = get_log();
-    output_debug_string(format!("skse load: {:#?}", skse).as_str());
+    output_debug_string(format!("ssse skse load: {:#?}", skse).as_str());
 
-    let result: Result<bool, Box<dyn std::error::Error>> = (|| unsafe {
-        let image_base = GetModuleHandleA(ptr::null()) as *const c_void;
+    let result: anyhow::Result<()> = try { unsafe {
+        let image_base = GetModuleHandleA(ptr::null()) as usize;
 
-        CONSOLE_CONTEXT = Some(transmute(image_base.offset(0x2f000f0)));
-        PRINT_TO_CONSOLE = Some(transmute(image_base.offset(0x85c290)));
+        console::init(image_base).context("console::init")?;
+        form::init(image_base).context("form::init")?;
 
-        let target_addr = transmute(image_base.offset(0x2e75f0));
-
-        ProcessConsoleInput.initialize(target_addr, new_process_console_input)?;
-        ProcessConsoleInput.enable()?;
-
-        Ok(true)
-    })();
+        db::get_db();
+    }};
 
     if let Err(err) = result {
-        log.write_all(format!("error SKSEPlugin_Load: {}", err).as_bytes()).unwrap();
+        log.write_all(format!("error SKSEPlugin_Load: {}\n", err).as_bytes()).unwrap();
         return false;
+    } else {
+        console::print("SkyrimSearchSe is ready").ok();
     }
-
-    print("SkyrimSearchSe is ready").ok();
 
     return true;
 }

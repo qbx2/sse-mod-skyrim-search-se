@@ -8,6 +8,13 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
+anyhow = "1.0.38"
+clap = "2.33.3"
 detour = "0.7.1"
+#lazy_static = "1.4.0"
+prettytable-rs = "0.8.0"
+region = "2.2.0"
+rusqlite = { version = "0.24.2", features = ["bundled"] }
+shlex = "1.0.0"
 win_dbg_logger = "0.1.0"
 winapi = { version = "0.3.9", features = ["libloaderapi", "shlobj", "minwindef", "ntdef", "errhandlingapi", "winerror", "winuser"] }

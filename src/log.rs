@@ -7,12 +7,13 @@ use winapi::shared::windef::HWND;
 use winapi::shared::winerror::S_OK;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shlobj::{CSIDL_MYDOCUMENTS, CSIDL_FLAG_CREATE, SHGFP_TYPE_CURRENT, SHGetFolderPathA};
+use win_dbg_logger::output_debug_string;
 
 const LOG_PATH: &str = "\\My Games\\Skyrim Special Edition\\SKSE\\skyrim-search-se.log";
 
 static mut LOG: Option<LineWriter<File>> = None;
 
-pub(crate) unsafe fn open_log_file() -> Result<LineWriter<File>, Box<dyn std::error::Error>> {
+unsafe fn open_log_file() -> Result<LineWriter<File>, Box<dyn std::error::Error + Send + Sync>> {
     let mut path = Vec::with_capacity(MAX_PATH);
     let result = SHGetFolderPathA(
         NULL as HWND,
@@ -39,7 +40,13 @@ pub(crate) fn get_log() -> &'static mut LineWriter<File> {
         return if let Some(ref mut log) = LOG {
             log
         } else {
-            LOG = Some(open_log_file().unwrap());
+            LOG = match open_log_file() {
+                Ok(log) => Some(log),
+                Err(err) => {
+                    output_debug_string(format!("failed to open_log_file: {}", err).as_str());
+                    panic!(err);
+                }
+            };
             LOG.as_mut().unwrap()
         }
     }
