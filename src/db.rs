@@ -1,14 +1,27 @@
 use win_dbg_logger::output_debug_string;
 use std::sync::Mutex;
+use anyhow::Context;
+use lazy_static::lazy_static;
 
-static mut DB: Option<Mutex<rusqlite::Connection>> = None;
+lazy_static! {
+    pub static ref DB: Mutex<rusqlite::Connection> = {
+        match init_db().context("init_db error") {
+            Ok(db) => Mutex::new(db),
+            Err(err) => {
+                output_debug_string(format!("{:#}", err).as_str());
+                panic!(format!("{:#}", err));
+            }
+        }
+    };
+}
+
 const DEBUG: bool = true;
 
-fn init_db() -> Result<rusqlite::Connection, Box<dyn std::error::Error + Send + Sync>> {
+fn init_db() -> anyhow::Result<rusqlite::Connection> {
     let conn = if DEBUG {
-        rusqlite::Connection::open("skyrim_search_se.db")?
+        rusqlite::Connection::open("skyrim_search_se.db").context("open error")?
     } else {
-        rusqlite::Connection::open("")?
+        rusqlite::Connection::open("").context("open error")?
     };
 
     conn.execute_batch(r#"
@@ -24,23 +37,6 @@ fn init_db() -> Result<rusqlite::Connection, Box<dyn std::error::Error + Send + 
         CREATE INDEX form_type ON forms (type);
         CREATE INDEX form_edid ON forms (edid);
         "#,
-    )?;
+    ).context("init_schema error")?;
     Ok(conn)
-}
-
-pub(crate) fn get_db() -> &'static Mutex<rusqlite::Connection> {
-    unsafe {
-        return if let Some(ref db) = DB {
-            db
-        } else {
-            DB = match init_db() {
-                Ok(db) => Some(Mutex::new(db)),
-                Err(err) => {
-                    output_debug_string(format!("failed to init_db: {}", err).as_str());
-                    panic!(err);
-                },
-            };
-            return DB.as_ref().unwrap();
-        }
-    }
 }

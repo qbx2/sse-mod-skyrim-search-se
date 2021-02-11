@@ -13,7 +13,6 @@ use std::fmt::{Debug, Formatter};
 use std::{fmt, ptr};
 use winapi::um::libloaderapi::GetModuleHandleA;
 use std::os::raw::c_char;
-use crate::log::get_log;
 use std::io::Write;
 use anyhow::Context;
 
@@ -73,7 +72,7 @@ pub extern fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo
 #[no_mangle]
 pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
     let skse = unsafe { &*skse };
-    let log = get_log();
+    lazy_static::initialize(&log::LOG);
     output_debug_string(format!("ssse skse load: {:#?}", skse).as_str());
 
     let result: anyhow::Result<()> = try { unsafe {
@@ -81,12 +80,13 @@ pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
 
         console::init(image_base).context("console::init")?;
         form::init(image_base).context("form::init")?;
-
-        db::get_db();
     }};
 
+    lazy_static::initialize(&db::DB);
+
     if let Err(err) = result {
-        log.write_all(format!("error SKSEPlugin_Load: {}\n", err).as_bytes()).unwrap();
+        log::LOG.lock().unwrap()
+            .write_all(format!("error SKSEPlugin_Load: {}\n", err).as_bytes()).unwrap();
         return false;
     } else {
         console::print("SkyrimSearchSe is ready").ok();

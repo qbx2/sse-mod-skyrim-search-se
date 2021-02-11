@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 anyhow = "1.0.38"
 clap = "2.33.3"
 detour = "0.7.1"
-#lazy_static = "1.4.0"
+lazy_static = "1.4.0"
 prettytable-rs = "0.8.0"
 region = "2.2.0"
 rusqlite = { version = "0.24.2", features = ["bundled"] }

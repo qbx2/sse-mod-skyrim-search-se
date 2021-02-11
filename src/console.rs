@@ -87,7 +87,7 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
 
 fn process_query_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let sql = matches.values_of("sql").unwrap().collect::<Vec<&str>>().join(" ");
-    let db = db::get_db().lock().unwrap();
+    let db = db::DB.lock().unwrap();
     let mut stmt: Statement = db.prepare(sql.as_str()).context("prepare error")?;
     print(format!("stmt: {:?}", stmt))?;
     let mut rows = stmt.query(NO_PARAMS).context("query error")?;

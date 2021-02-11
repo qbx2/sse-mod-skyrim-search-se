@@ -449,6 +449,7 @@ dependencies = [
  "anyhow",
  "clap",
  "detour",
+ "lazy_static",
  "prettytable-rs",
  "region",
  "rusqlite",

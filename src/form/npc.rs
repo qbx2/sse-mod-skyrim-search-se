@@ -24,7 +24,7 @@ struct TESForm {
 
 fn new_edid_getter(this: &TESForm) -> *const c_char {
     let result: Result<*const c_char, anyhow::Error> = try {
-        let db = db::get_db().lock().unwrap();
+        let db = db::DB.lock().unwrap();
         let mut stmt = db.prepare("SELECT edid FROM forms WHERE id = ?")?;
         let mut edid_iter = stmt.query_map(&[this.form_id], |row| {
             Ok(row.get(0)?)
@@ -42,7 +42,7 @@ fn new_edid_setter(this: &TESForm, edid: *const c_char) -> bool {
     let result: anyhow::Result<()> = try {
         unsafe {
             if edid as usize != 0 {
-                db::get_db().lock().map_err(|e| anyhow!(e.to_string()))?.execute(
+                db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.execute(
                     "INSERT OR REPLACE INTO forms (id, type, edid) VALUES (?1, ?2, ?3)",
                     params![form_id, form_type, CStr::from_ptr(edid).to_str()?],
                 )?;
