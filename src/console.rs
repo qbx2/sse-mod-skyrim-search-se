@@ -14,8 +14,7 @@ static_detour! {
     static ProcessConsoleInput: fn(usize, i64, i64, i64);
 }
 
-const SKYRIM_SEARCH_COMMAND_SHORT: &str = "ss";
-const SKYRIM_SEARCH_COMMAND_FULL: &str = "skyrimsearch";
+const SKYRIM_SEARCH_COMMANDS: [&str; 4] = ["ss", "sss", "skyrimsearch", "skyrimsearchse"];
 
 fn get_clap<'a, 'b>() -> clap::App<'a, 'b> {
     clap::App::new("skyrim-search-se")
@@ -53,7 +52,7 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             Some(result) => result,
             None => {
                 if let Some(command) = input.trim_start().split_ascii_whitespace().next() {
-                    if command == SKYRIM_SEARCH_COMMAND_SHORT || command == SKYRIM_SEARCH_COMMAND_FULL {
+                    if SKYRIM_SEARCH_COMMANDS.contains(&command) {
                         print("skyrim-search-se: parse failed; falling back to skyrim engine").ok();
                     }
                 }
@@ -61,7 +60,7 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             }
         };
         let command = input[0].to_ascii_lowercase();
-        if command != SKYRIM_SEARCH_COMMAND_SHORT && command != SKYRIM_SEARCH_COMMAND_FULL {
+        if !SKYRIM_SEARCH_COMMANDS.contains(&command.as_str()) {
             print_usage = command == "help";
             return Ok(false);
         }

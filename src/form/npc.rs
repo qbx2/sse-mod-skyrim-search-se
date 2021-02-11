@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use winapi::ctypes::{c_void, c_char};
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use win_dbg_logger::output_debug_string;
 use detour::static_detour;
 use crate::patch::patch_bytes;
