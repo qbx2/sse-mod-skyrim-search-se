@@ -48,6 +48,13 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
             form_id integer primary key not null,
             base_form_id integer
         );
+
+        DROP TABLE IF EXISTS cell;
+        CREATE TABLE cell (
+            form_id integer primary key not null,
+            editor_id text unique collate nocase,
+            name text collate nocase
+        );
         "#,
     ).context("init_schema error")?;
 
@@ -75,4 +82,16 @@ impl Worker {
     fn process_job(db: &rusqlite::Connection, msg: Job) -> anyhow::Result<()> {
         msg(db)
     }
+}
+
+pub(crate) fn init_index(db: &rusqlite::Connection) -> rusqlite::Result<()> {
+    db.execute_batch(r#"
+        CREATE INDEX IF NOT EXISTS npc_editor_id ON npc (editor_id);
+        CREATE INDEX IF NOT EXISTS npc_name ON npc (name);
+
+        CREATE INDEX IF NOT EXISTS actor_base_form_id ON actor (base_form_id);
+
+        CREATE INDEX IF NOT EXISTS cell_editor_id ON cell (editor_id);
+        CREATE INDEX IF NOT EXISTS cell_name ON cell (name);
+     "#)
 }

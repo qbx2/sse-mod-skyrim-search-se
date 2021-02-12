@@ -7,6 +7,7 @@ use std::mem::transmute;
 mod npc;
 mod achr;
 mod refr;
+mod cell;
 
 #[repr(C)]
 pub(crate) struct TESForm {
@@ -47,7 +48,8 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     });
 
     npc::init(image_base).context("npc::init")?;
-    achr::init(image_base).context("npc::init")?;
+    achr::init(image_base).context("achr::init")?;
+    cell::init(image_base).context("cell::init")?;
 
     Ok(())
 }

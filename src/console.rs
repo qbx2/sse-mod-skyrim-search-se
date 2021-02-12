@@ -49,6 +49,12 @@ fn get_clap<'a, 'b>() -> clap::App<'a, 'b> {
                 .help("search query (e.g. name, edid, form_id, ref_id)")
                 .required(true)
                 .multiple(true)))
+        .subcommand(SubCommand::with_name("cell")
+            .about("search cell (location)")
+            .arg(Arg::with_name("query")
+                .help("search query (e.g. name, edid, form_id)")
+                .required(true)
+                .multiple(true)))
 }
 
 fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i64) {
@@ -94,11 +100,7 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             let pair = Arc::new((Mutex::new(()), Condvar::new()));
             let pair2 = Arc::clone(&pair);
             S.task_queue.send(Box::new(move |db| {
-                db.execute_batch(r#"
-                     CREATE INDEX npc_editor_id ON npc (editor_id);
-                     CREATE INDEX npc_name ON npc (name);
-                     CREATE INDEX actor_base_form_id ON actor (base_form_id);
-                 "#).logging_ok();
+                db::init_index(db).logging_ok();
 
                 pair2.1.notify_one();
 
@@ -114,6 +116,8 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             process_query_command(matches)?;
         } else if let Some(matches) = matches.subcommand_matches("npc") {
             process_npc_command(matches)?;
+        } else if let Some(matches) = matches.subcommand_matches("cell") {
+            process_cell_command(matches)?;
         }
         Ok(true)
     })();
@@ -180,6 +184,40 @@ fn process_npc_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     print_rows(rows, matches)
 }
 
+fn process_cell_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
+    let db = db::DB.lock().unwrap();
+    let query: String = matches.values_of("query").unwrap().collect::<Vec<&str>>().join(" ");
+
+    let mut stmt;
+    let rows;
+
+    if let Ok(id) = i64::from_str_radix(query.trim_start_matches("0x"), 16) {
+        stmt = db.prepare_cached(
+            "SELECT * FROM cell WHERE editor_id LIKE ?1 OR name LIKE ?1 OR form_id=?2"
+        ).context("prepare error")?;
+
+        if matches.is_present("debug") {
+            print(format!("stmt: {:?}", *stmt));
+        }
+
+        rows = stmt.query(params![format!("%{}%", query), id])
+            .context("query error")?;
+    } else {
+        stmt = db.prepare_cached(
+            "SELECT * FROM cell WHERE editor_id LIKE ?1 OR name LIKE ?1"
+        ).context("prepare error")?;
+
+        if matches.is_present("debug") {
+            print(format!("stmt: {:?}", *stmt));
+        }
+
+        rows = stmt.query(params![format!("%{}%", query)])
+            .context("query error")?;
+    }
+
+    print_rows(rows, matches)
+}
+
 fn print_rows(mut rows: rusqlite::Rows, matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let print_int_as_decimal = matches.is_present("int-as-decimal");
     let column_count = match rows.column_count() {
@@ -213,7 +251,7 @@ fn print_rows(mut rows: rusqlite::Rows, matches: &clap::ArgMatches) -> anyhow::R
                     if print_int_as_decimal {
                         v.to_string()
                     } else {
-                        format!("{:#x}", v)
+                        format!("{:X}", v)
                     }
                 },
                 ValueRef::Real(v) => v.to_string(),
