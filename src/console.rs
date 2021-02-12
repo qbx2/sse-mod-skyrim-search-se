@@ -12,6 +12,9 @@ use rusqlite::types::ValueRef;
 use late_static::LateStatic;
 use crate::log::Loggable;
 use rusqlite::params;
+use std::sync::mpsc::Sender;
+use crate::db::Job;
+use std::sync::{Arc, Mutex, Condvar};
 
 static_detour! {
     static ProcessConsoleInput: fn(usize, i64, i64, i64);
@@ -88,15 +91,22 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
 
         static CREATE_INDEX: std::sync::Once = std::sync::Once::new();
         CREATE_INDEX.call_once(|| {
-            match db::DB.lock().map_err(|e| anyhow!(e.to_string())).logging_ok() {
-                Some(db) => {
-                    db.execute_batch(r#"
-                    CREATE INDEX npc_editor_id ON npc (editor_id);
-                    CREATE INDEX npc_name ON npc (name);
-                    CREATE INDEX actor_base_form_id ON actor (base_form_id);
-                    "#).logging_ok();
-                },
-                None => {},
+            let pair = Arc::new((Mutex::new(()), Condvar::new()));
+            let pair2 = Arc::clone(&pair);
+            S.task_queue.send(Box::new(move |db| {
+                db.execute_batch(r#"
+                     CREATE INDEX npc_editor_id ON npc (editor_id);
+                     CREATE INDEX npc_name ON npc (name);
+                     CREATE INDEX actor_base_form_id ON actor (base_form_id);
+                 "#).logging_ok();
+
+                pair2.1.notify_one();
+
+                Ok(())
+            })).map_err(|e| anyhow!(e.to_string())).logging_ok();
+            let (lock, cond) = &*pair;
+            if let Ok(guard) = lock.lock() {
+                cond.wait(guard).map_err(|e| anyhow!(e.to_string())).logging_ok();
             };
         });
 
@@ -221,6 +231,7 @@ fn print_rows(mut rows: rusqlite::Rows, matches: &clap::ArgMatches) -> anyhow::R
 struct State {
     console_context: *const *const c_void,
     print_to_console: extern "C" fn(*const c_void, *const c_char, ...) -> (),
+    task_queue: Sender<Job>,
 }
 unsafe impl Sync for State {}
 static S: LateStatic<State> = LateStatic::new();
@@ -256,6 +267,7 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     LateStatic::assign(&S, State {
         console_context: transmute(image_base + 0x2f000f0),
         print_to_console: transmute(image_base + 0x85c290),
+        task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
     });
 
     let target_addr = transmute(image_base + 0x2e75f0);

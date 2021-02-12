@@ -2,6 +2,7 @@ use win_dbg_logger::output_debug_string;
 use std::sync::Mutex;
 use anyhow::Context;
 use lazy_static::lazy_static;
+use crate::log::Loggable;
 
 lazy_static! {
     pub static ref DB: Mutex<rusqlite::Connection> = {
@@ -13,7 +14,15 @@ lazy_static! {
             }
         }
     };
+
+    pub static ref TASK_QUEUE: Mutex<std::sync::mpsc::Sender<Job>> = {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(|| Worker(rx).worker());
+        Mutex::new(tx)
+    };
 }
+
+pub(crate) type Job = Box<dyn FnOnce(&rusqlite::Connection) -> anyhow::Result<()> + Send + 'static>;
 
 fn init_db() -> anyhow::Result<rusqlite::Connection> {
     let conn = if crate::DEBUG {
@@ -41,5 +50,29 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
         );
         "#,
     ).context("init_schema error")?;
+
     Ok(conn)
+}
+
+struct Worker(std::sync::mpsc::Receiver<Job>);
+
+impl Worker {
+    fn worker(self) {
+        let task_queue = self.0;
+        loop {
+            let job = task_queue.recv().unwrap();
+            let db = DB.lock().unwrap();
+            let mut num_jobs = 1;
+            Self::process_job(&db, job).logging_ok();
+            for job in task_queue.try_iter() {
+                num_jobs += 1;
+                Self::process_job(&db, job).logging_ok();
+            }
+            output_debug_string(format!("processed {} jobs", num_jobs).as_str());
+        }
+    }
+
+    fn process_job(db: &rusqlite::Connection, msg: Job) -> anyhow::Result<()> {
+        msg(db)
+    }
 }

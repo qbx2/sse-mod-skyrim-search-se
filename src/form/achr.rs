@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use winapi::ctypes::c_void;
 use win_dbg_logger::output_debug_string;
 use crate::patch::patch_bytes;
@@ -10,12 +10,15 @@ use std::fmt::Formatter;
 use std::ops::Deref;
 use crate::log::Loggable;
 use crate::form::refr::TESObjectREFR;
+use std::sync::mpsc::Sender;
+use crate::db::Job;
 
 struct TESCharacter(TESObjectREFR);
 
 struct State {
     character_vtable: usize,
     character_load: fn(&TESCharacter, u64) -> u64,
+    task_queue: Sender<Job>,
 }
 unsafe impl Sync for State {}
 static S: LateStatic<State> = LateStatic::new();
@@ -39,10 +42,14 @@ impl TESCharacter {
         };
         let form_id = self.0.form.form_id;
         let result: anyhow::Result<()> = try {
-            db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.prepare_cached(
-                "INSERT INTO actor (form_id, base_form_id) VALUES (?, ?)\
-                 ON CONFLICT(form_id) DO UPDATE SET base_form_id=excluded.base_form_id",
-            )?.execute(params![form_id, base_form.form_id])?;
+            S.task_queue.send(Box::new(move |db| {
+                db.prepare_cached(
+                    "INSERT INTO actor (form_id, base_form_id) VALUES (?, ?)\
+                     ON CONFLICT(form_id) DO UPDATE SET base_form_id=excluded.base_form_id",
+                ).context("chracter_new_load prepare")?
+                    .execute(params![form_id, base_form.form_id]).context("character_new_load execute")?;
+                Ok(())
+            })).map_err(|e| anyhow!(e.to_string()))?;
         };
         result.logging_ok();
         return ret;
@@ -61,6 +68,7 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     LateStatic::assign(&S, State {
         character_vtable,
         character_load: transmute(*(original_character_load.as_ptr() as *const usize)),
+        task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
     });
 
     output_debug_string(format!("S: {:#x?}", S.deref()).as_str());
