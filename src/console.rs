@@ -11,6 +11,7 @@ use std::option::NoneError;
 use rusqlite::types::ValueRef;
 use late_static::LateStatic;
 use crate::log::Loggable;
+use rusqlite::params;
 
 static_detour! {
     static ProcessConsoleInput: fn(usize, i64, i64, i64);
@@ -25,18 +26,26 @@ fn get_clap<'a, 'b>() -> clap::App<'a, 'b> {
         .setting(AppSettings::InferSubcommands)
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
+        .arg(Arg::with_name("debug")
+                .long("debug")
+                .global(true))
         .subcommand(SubCommand::with_name("query")
-            .about("execute raw query")
+            .about("execute raw query. quote your query as in unix shell if needed.")
             .setting(AppSettings::TrailingVarArg)
             .arg(Arg::with_name("sql")
                 .help("SQLite SQL")
                 .required(true)
-                .multiple(true)
-            )
+                .multiple(true))
             .arg(Arg::with_name("int-as-decimal")
                 .long("int-as-decimal")
                 .help("print integer in decimal format. \
                           otherwise, it's printed in hexademical format.")))
+        .subcommand(SubCommand::with_name("npc")
+            .about("search npc and its reference")
+            .arg(Arg::with_name("query")
+                .help("search query (e.g. name, edid, form_id, ref_id)")
+                .required(true)
+                .multiple(true)))
 }
 
 fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i64) {
@@ -70,12 +79,17 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             print_usage = command == "help";
             return Ok(false);
         }
-        print(format!("this is test; input = {:?}", input));
 
         let matches = get_clap().get_matches_from_safe(input)?;
-        print(format!("matches: {:?}", matches));
+
+        if matches.is_present("debug") {
+            print(format!("ArgMatches: {:?}", matches));
+        }
+
         if let Some(matches) = matches.subcommand_matches("query") {
             process_query_command(matches)?;
+        } else if let Some(matches) = matches.subcommand_matches("npc") {
+            process_npc_command(matches)?;
         }
         Ok(true)
     })();
@@ -92,12 +106,58 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
 
 fn process_query_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let sql = matches.values_of("sql").unwrap().collect::<Vec<&str>>().join(" ");
-    let print_int_as_decimal = matches.is_present("int-as-decimal");
-
     let db = db::DB.lock().unwrap();
     let mut stmt: Statement = db.prepare(sql.as_str()).context("prepare error")?;
-    print(format!("stmt: {:?}", stmt));
-    let mut rows = stmt.query(NO_PARAMS).context("query error")?;
+
+    if matches.is_present("debug") {
+        print(format!("stmt: {:?}", stmt));
+    }
+
+    let rows = stmt.query(NO_PARAMS).context("query error")?;
+    print_rows(rows, matches)
+}
+
+fn process_npc_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
+    let db = db::DB.lock().unwrap();
+    let query: String = matches.values_of("query").unwrap().collect::<Vec<&str>>().join(" ");
+
+    let mut stmt: Statement;
+    let rows;
+
+    if let Ok(id) = i64::from_str_radix(query.trim_start_matches("0x"), 16) {
+        stmt = db.prepare(
+            "SELECT npc.*, actor.form_id as ref_id FROM npc \
+             LEFT JOIN actor ON npc.form_id = actor.base_form_id \
+             WHERE npc.editor_id LIKE ?1 OR npc.name LIKE ?1 \
+             OR npc.form_id=?2 OR actor.form_id=?2"
+        ).context("prepare error")?;
+
+        if matches.is_present("debug") {
+            print(format!("stmt: {:?}", stmt));
+        }
+
+        rows = stmt.query(params![format!("%{}%", query), id])
+            .context("query error")?;
+    } else {
+        stmt = db.prepare(
+            "SELECT npc.*, actor.form_id as ref_id FROM npc \
+             LEFT JOIN actor ON npc.form_id = actor.base_form_id \
+             WHERE npc.editor_id LIKE ?1 OR npc.name LIKE ?1"
+        ).context("prepare error")?;
+
+        if matches.is_present("debug") {
+            print(format!("stmt: {:?}", stmt));
+        }
+
+        rows = stmt.query(params![format!("%{}%", query)])
+            .context("query error")?;
+    }
+
+    print_rows(rows, matches)
+}
+
+fn print_rows(mut rows: rusqlite::Rows, matches: &clap::ArgMatches) -> anyhow::Result<()> {
+    let print_int_as_decimal = matches.is_present("int-as-decimal");
     let column_count = match rows.column_count() {
         Some(count) => count,
         None => anyhow::bail!("no data"),

@@ -41,7 +41,7 @@ impl TESCharacter {
         let result: anyhow::Result<()> = try {
             db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.execute(
                 "INSERT INTO actor (form_id, base_form_id) VALUES (?1, ?2)\
-             ON CONFLICT(form_id) DO UPDATE SET base_form_id=excluded.base_form_id",
+                 ON CONFLICT(form_id) DO UPDATE SET base_form_id=excluded.base_form_id",
                 params![form_id, base_form.form_id],
             )?;
         };
