@@ -11,19 +11,10 @@ use late_static::LateStatic;
 use std::fmt::Formatter;
 use std::ops::Deref;
 use crate::log::Loggable;
+use crate::form::TESForm;
 
 static_detour! {
     static NpcEdidSetter: fn(*const c_void, *const c_char) -> bool;
-}
-
-#[repr(C)]
-struct TESForm {
-    unknown_00: u64,
-    unknown_08: u64,
-    flags: u32,
-    form_id: u32,
-    unknown_18: u16,
-    form_type: u8,
 }
 
 struct TESNPC(TESForm);
@@ -46,18 +37,6 @@ impl std::fmt::Debug for State {
     }
 }
 
-impl TESForm {
-    pub(crate) fn get_name(&self) -> Option<std::borrow::Cow<str>> {
-        unsafe {
-            let result = (S.get_name)(self);
-            if result.is_null() {
-                return None;
-            }
-            Some(CStr::from_ptr(result).to_string_lossy())
-        }
-    }
-}
-
 impl TESNPC {
     fn new_edid_setter(&self, edid: *const c_char) -> bool {
         if edid.is_null() {
@@ -68,8 +47,8 @@ impl TESNPC {
             let edid = unsafe { CStr::from_ptr(edid).to_str()? };
 
             db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.execute(
-                "INSERT INTO npc (id, edid) VALUES (?1, ?2)\
-                 ON CONFLICT(id) DO UPDATE SET edid=excluded.edid",
+                "INSERT INTO npc (form_id, editor_id) VALUES (?1, ?2)\
+                 ON CONFLICT(form_id) DO UPDATE SET editor_id=excluded.editor_id",
                 params![form_id, edid],
             )?;
         };
@@ -82,8 +61,8 @@ impl TESNPC {
         if let Some(name) = self.0.get_name() {
             let result: anyhow::Result<()> = try {
                 db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.execute(
-                    "INSERT INTO npc (id, name) VALUES (?1, ?2)\
-                     ON CONFLICT(id) DO UPDATE SET name=excluded.name",
+                    "INSERT INTO npc (form_id, name) VALUES (?1, ?2)\
+                     ON CONFLICT(form_id) DO UPDATE SET name=excluded.name",
                     params![form_id, name],
                 )?;
             };

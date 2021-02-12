@@ -30,11 +30,11 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
         PRAGMA journal_mode=OFF;
         DROP TABLE IF EXISTS npc;
         CREATE TABLE npc (
-            id integer primary key not null,
-            edid text unique collate nocase,
+            form_id integer primary key not null,
+            editor_id text unique collate nocase,
             name text collate nocase
         );
-        CREATE INDEX npc_edid ON npc (edid);
+        CREATE INDEX npc_editor_id ON npc (editor_id);
         CREATE INDEX npc_name ON npc (name);
         "#,
     ).context("init_schema error")?;
