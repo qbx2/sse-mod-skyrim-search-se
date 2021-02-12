@@ -39,7 +39,7 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
         DROP TABLE IF EXISTS npc;
         CREATE TABLE npc (
             form_id integer primary key not null,
-            editor_id text unique collate nocase,
+            editor_id text collate nocase,
             name text collate nocase
         );
 
@@ -52,7 +52,7 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
         DROP TABLE IF EXISTS cell;
         CREATE TABLE cell (
             form_id integer primary key not null,
-            editor_id text unique collate nocase,
+            editor_id text collate nocase,
             name text collate nocase
         );
         "#,
