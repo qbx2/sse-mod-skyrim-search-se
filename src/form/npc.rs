@@ -21,8 +21,7 @@ struct TESNPC(TESForm);
 
 struct State {
     npc_vtable: usize,
-    get_name: fn(&TESForm) -> *const c_char,
-    npc_loadform: fn(&TESNPC, u64) -> u64,
+    npc_load: fn(&TESNPC, u64) -> u64,
 }
 unsafe impl Sync for State {}
 static S: LateStatic<State> = LateStatic::new();
@@ -31,8 +30,7 @@ impl std::fmt::Debug for State {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("State")
             .field("npc_vtable", &(self.npc_vtable as usize))
-            .field("get_name", &(self.get_name as usize))
-            .field("npc_loadform", &(self.npc_loadform as usize))
+            .field("npc_load", &(self.npc_load as usize))
             .finish()
     }
 }
@@ -56,7 +54,7 @@ impl TESNPC {
     }
 
     fn new_load(&self, arg: u64) -> u64 {
-        let result = (S.npc_loadform)(self, arg);
+        let result = (S.npc_load)(self, arg);
         let form_id = self.0.form_id;
         if let Some(name) = self.0.get_name() {
             let result: anyhow::Result<()> = try {
@@ -74,9 +72,8 @@ impl TESNPC {
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     let npc_vtable = transmute(image_base + 0x159fcd0);
-    let get_name = transmute(image_base + 0x196e10);
 
-    output_debug_string(format!("setter: {:#x}", npc_vtable + 0x198).as_str());
+    output_debug_string(format!("npc edid setter: {:#x}", npc_vtable + 0x198).as_str());
 
     patch_bytes(&(TESNPC::new_edid_setter as usize), (npc_vtable + 0x198) as *mut c_void, 8)?;
     let original_npc_load = patch_bytes(
@@ -87,8 +84,7 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
 
     LateStatic::assign(&S, State {
         npc_vtable,
-        get_name,
-        npc_loadform: transmute(*(original_npc_load.as_ptr() as *const usize)),
+        npc_load: transmute(*(original_npc_load.as_ptr() as *const usize)),
     });
 
     output_debug_string(format!("S: {:#x?}", S.deref()).as_str());
