@@ -44,11 +44,10 @@ impl TESNPC {
             let form_id = self.0.form_id;
             let edid = unsafe { CStr::from_ptr(edid).to_str()? };
 
-            db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.execute(
-                "INSERT INTO npc (form_id, editor_id) VALUES (?1, ?2)\
+            db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.prepare_cached(
+                "INSERT INTO npc (form_id, editor_id) VALUES (?, ?)\
                  ON CONFLICT(form_id) DO UPDATE SET editor_id=excluded.editor_id",
-                params![form_id, edid],
-            )?;
+            )?.execute(params![form_id, edid])?;
         };
         result.logging_ok().is_some()
     }
@@ -58,11 +57,10 @@ impl TESNPC {
         let form_id = self.0.form_id;
         if let Some(name) = self.0.get_name() {
             let result: anyhow::Result<()> = try {
-                db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.execute(
-                    "INSERT INTO npc (form_id, name) VALUES (?1, ?2)\
+                db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.prepare_cached(
+                    "INSERT INTO npc (form_id, name) VALUES (?, ?)\
                      ON CONFLICT(form_id) DO UPDATE SET name=excluded.name",
-                    params![form_id, name],
-                )?;
+                )?.execute(params![form_id, name])?;
             };
             result.logging_ok();
         }

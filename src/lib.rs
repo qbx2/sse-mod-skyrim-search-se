@@ -17,6 +17,8 @@ use std::io::Write;
 use anyhow::Context;
 use crate::log::Loggable;
 
+const DEBUG: bool = true;
+
 type PluginHandle = u32;
 
 #[repr(C)]

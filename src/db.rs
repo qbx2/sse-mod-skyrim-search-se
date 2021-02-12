@@ -15,10 +15,8 @@ lazy_static! {
     };
 }
 
-const DEBUG: bool = true;
-
 fn init_db() -> anyhow::Result<rusqlite::Connection> {
-    let conn = if DEBUG {
+    let conn = if crate::DEBUG {
         rusqlite::Connection::open("skyrim_search_se.db").context("open error")?
     } else {
         rusqlite::Connection::open("").context("open error")?
@@ -35,15 +33,12 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
             editor_id text unique collate nocase,
             name text collate nocase
         );
-        CREATE INDEX npc_editor_id ON npc (editor_id);
-        CREATE INDEX npc_name ON npc (name);
 
         DROP TABLE IF EXISTS actor;
         CREATE TABLE actor (
             form_id integer primary key not null,
             base_form_id integer
         );
-        CREATE INDEX actor_base_form_id ON actor (base_form_id);
         "#,
     ).context("init_schema error")?;
     Ok(conn)

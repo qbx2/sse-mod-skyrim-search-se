@@ -39,11 +39,10 @@ impl TESCharacter {
         };
         let form_id = self.0.form.form_id;
         let result: anyhow::Result<()> = try {
-            db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.execute(
-                "INSERT INTO actor (form_id, base_form_id) VALUES (?1, ?2)\
+            db::DB.lock().map_err(|e| anyhow!(e.to_string()))?.prepare_cached(
+                "INSERT INTO actor (form_id, base_form_id) VALUES (?, ?)\
                  ON CONFLICT(form_id) DO UPDATE SET base_form_id=excluded.base_form_id",
-                params![form_id, base_form.form_id],
-            )?;
+            )?.execute(params![form_id, base_form.form_id])?;
         };
         result.logging_ok();
         return ret;

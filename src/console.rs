@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use winapi::ctypes::{c_void, c_char};
 use std::ffi::{CStr, CString};
 use std::intrinsics::transmute;
@@ -86,6 +86,20 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             print(format!("ArgMatches: {:?}", matches));
         }
 
+        static CREATE_INDEX: std::sync::Once = std::sync::Once::new();
+        CREATE_INDEX.call_once(|| {
+            match db::DB.lock().map_err(|e| anyhow!(e.to_string())).logging_ok() {
+                Some(db) => {
+                    db.execute_batch(r#"
+                    CREATE INDEX npc_editor_id ON npc (editor_id);
+                    CREATE INDEX npc_name ON npc (name);
+                    CREATE INDEX actor_base_form_id ON actor (base_form_id);
+                    "#).logging_ok();
+                },
+                None => {},
+            };
+        });
+
         if let Some(matches) = matches.subcommand_matches("query") {
             process_query_command(matches)?;
         } else if let Some(matches) = matches.subcommand_matches("npc") {
@@ -121,11 +135,11 @@ fn process_npc_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let db = db::DB.lock().unwrap();
     let query: String = matches.values_of("query").unwrap().collect::<Vec<&str>>().join(" ");
 
-    let mut stmt: Statement;
+    let mut stmt;
     let rows;
 
     if let Ok(id) = i64::from_str_radix(query.trim_start_matches("0x"), 16) {
-        stmt = db.prepare(
+        stmt = db.prepare_cached(
             "SELECT npc.*, actor.form_id as ref_id FROM npc \
              LEFT JOIN actor ON npc.form_id = actor.base_form_id \
              WHERE npc.editor_id LIKE ?1 OR npc.name LIKE ?1 \
@@ -133,20 +147,20 @@ fn process_npc_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
         ).context("prepare error")?;
 
         if matches.is_present("debug") {
-            print(format!("stmt: {:?}", stmt));
+            print(format!("stmt: {:?}", *stmt));
         }
 
         rows = stmt.query(params![format!("%{}%", query), id])
             .context("query error")?;
     } else {
-        stmt = db.prepare(
+        stmt = db.prepare_cached(
             "SELECT npc.*, actor.form_id as ref_id FROM npc \
              LEFT JOIN actor ON npc.form_id = actor.base_form_id \
              WHERE npc.editor_id LIKE ?1 OR npc.name LIKE ?1"
         ).context("prepare error")?;
 
         if matches.is_present("debug") {
-            print(format!("stmt: {:?}", stmt));
+            print(format!("stmt: {:?}", *stmt));
         }
 
         rows = stmt.query(params![format!("%{}%", query)])
