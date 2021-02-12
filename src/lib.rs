@@ -15,6 +15,7 @@ use winapi::um::libloaderapi::GetModuleHandleA;
 use std::os::raw::c_char;
 use std::io::Write;
 use anyhow::Context;
+use crate::log::Loggable;
 
 type PluginHandle = u32;
 
@@ -71,6 +72,14 @@ pub extern fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo
 
 #[no_mangle]
 pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
+    std::panic::set_hook(Box::new(|info| {
+        let msg = info.to_string();
+        output_debug_string(msg.as_str());
+        if let Ok(mut w) = log::LOG.lock() {
+            w.write_all(msg.as_bytes()).ok();
+        }
+    }));
+
     let skse = unsafe { &*skse };
     lazy_static::initialize(&log::LOG);
     output_debug_string(format!("ssse skse load: {:#?}", skse).as_str());
@@ -88,9 +97,12 @@ pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
         log::LOG.lock().unwrap()
             .write_all(format!("error SKSEPlugin_Load: {}\n", err).as_bytes()).unwrap();
         return false;
-    } else {
-        console::print("SkyrimSearchSe is ready").ok();
     }
+
+    log::LOG.lock().unwrap()
+        .write_all("SkyrimSearchSe is ready".as_bytes()).logging_ok();
+
+    output_debug_string("SkyrimSearchSe is ready");
 
     return true;
 }

@@ -28,14 +28,14 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
         PRAGMA mmap_size=268435456;
         PRAGMA synchronous=OFF;
         PRAGMA journal_mode=OFF;
-        DROP TABLE IF EXISTS forms;
-        CREATE TABLE forms (
+        DROP TABLE IF EXISTS npc;
+        CREATE TABLE npc (
             id integer primary key not null,
-            type integer,
-            edid text unique
+            edid text unique collate nocase,
+            name text collate nocase
         );
-        CREATE INDEX form_type ON forms (type);
-        CREATE INDEX form_edid ON forms (edid);
+        CREATE INDEX npc_edid ON npc (edid);
+        CREATE INDEX npc_name ON npc (name);
         "#,
     ).context("init_schema error")?;
     Ok(conn)

@@ -272,6 +272,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "late-static"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d93fcedb30e350a455138fc814eb049826109a829ff896aba2066ceda81d4e5b"
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -449,6 +455,7 @@ dependencies = [
  "anyhow",
  "clap",
  "detour",
+ "late-static",
  "lazy_static",
  "prettytable-rs",
  "region",

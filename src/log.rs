@@ -10,7 +10,8 @@ use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shlobj::{CSIDL_MYDOCUMENTS, CSIDL_FLAG_CREATE, SHGFP_TYPE_CURRENT, SHGetFolderPathA};
 use win_dbg_logger::output_debug_string;
 use lazy_static::lazy_static;
-use anyhow::Context;
+use anyhow::{anyhow, Context};
+use std::io::Write;
 
 const LOG_PATH: &str = "\\My Games\\Skyrim Special Edition\\SKSE\\skyrim-search-se.log";
 
@@ -44,5 +45,29 @@ fn open_log_file() -> anyhow::Result<LineWriter<File>> {
 
         let file = File::create(&path)?;
         Ok(LineWriter::new(file))
+    }
+}
+
+pub(crate) trait Loggable<T> {
+    fn logging_ok(self) -> Option<T>;
+}
+
+impl<T, E: Into<anyhow::Error>> Loggable<T> for Result<T, E> {
+    fn logging_ok(self) -> Option<T> {
+        match self {
+            Ok(v) => return Some(v),
+            Err(err) => {
+                let result: anyhow::Result<()> = try {
+                    let err = err.into();
+                    output_debug_string(format!("{:#}", err).as_str());
+                    LOG.lock().map_err(|e| anyhow!(e.to_string()))?
+                        .write_all(format!("{:#}", err).as_bytes())?
+                };
+                if let Err(err) = result {
+                    output_debug_string(format!("{:#}", err.context("Loggable::log")).as_str());
+                }
+                None
+            }
+        }
     }
 }

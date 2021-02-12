@@ -9,6 +9,8 @@ use crate::db;
 use rusqlite::{NO_PARAMS, Statement};
 use std::option::NoneError;
 use rusqlite::types::ValueRef;
+use late_static::LateStatic;
+use crate::log::Loggable;
 
 static_detour! {
     static ProcessConsoleInput: fn(usize, i64, i64, i64);
@@ -30,7 +32,11 @@ fn get_clap<'a, 'b>() -> clap::App<'a, 'b> {
                 .help("SQLite SQL")
                 .required(true)
                 .multiple(true)
-            ))
+            )
+            .arg(Arg::with_name("int-as-decimal")
+                .long("int-as-decimal")
+                .help("print integer in decimal format. \
+                          otherwise, it's printed in hexademical format.")))
 }
 
 fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i64) {
@@ -53,7 +59,7 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             None => {
                 if let Some(command) = input.trim_start().split_ascii_whitespace().next() {
                     if SKYRIM_SEARCH_COMMANDS.contains(&command) {
-                        print("skyrim-search-se: parse failed; falling back to skyrim engine").ok();
+                        print("skyrim-search-se: parse failed; falling back to skyrim engine");
                     }
                 }
                 return Ok(false);
@@ -64,32 +70,39 @@ fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i6
             print_usage = command == "help";
             return Ok(false);
         }
-        print(format!("this is test; input = {:?}", input)).ok();
+        print(format!("this is test; input = {:?}", input));
 
         let matches = get_clap().get_matches_from_safe(input)?;
-        print(format!("matches: {:?}", matches))?;
+        print(format!("matches: {:?}", matches));
         if let Some(matches) = matches.subcommand_matches("query") {
             process_query_command(matches)?;
         }
         Ok(true)
     })();
     if let Err(ref err) = result {
-        print(format!("{:#}", err)).ok();
+        print(format!("{:#}", err));
     }
     if let Ok(false) = result {
         ProcessConsoleInput.call(param1, param2, param3, param4);
     }
     if print_usage {
-        print("skyrim-search-se usage: ss --help").ok();
+        print("skyrim-search-se usage: ss --help");
     }
 }
 
 fn process_query_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let sql = matches.values_of("sql").unwrap().collect::<Vec<&str>>().join(" ");
+    let print_int_as_decimal = matches.is_present("int-as-decimal");
+
     let db = db::DB.lock().unwrap();
     let mut stmt: Statement = db.prepare(sql.as_str()).context("prepare error")?;
-    print(format!("stmt: {:?}", stmt))?;
+    print(format!("stmt: {:?}", stmt));
     let mut rows = stmt.query(NO_PARAMS).context("query error")?;
+    let column_count = match rows.column_count() {
+        Some(count) => count,
+        None => anyhow::bail!("no data"),
+    };
+
     let mut ptable = prettytable::Table::new();
     let _: Result<(), NoneError> = try {
         let names = rows.column_names()?;
@@ -100,10 +113,6 @@ fn process_query_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
                 .map(prettytable::Cell::new)
                 .collect()
         );
-    };
-    let column_count = match rows.column_count() {
-        Some(count) => count,
-        None => anyhow::bail!("no data"),
     };
     loop {
         let row = match rows.next().map_err(anyhow::Error::new) {
@@ -116,7 +125,13 @@ fn process_query_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
             let column = row.get_raw(i);
             let repr = match column {
                 ValueRef::Null => String::from("<null>"),
-                ValueRef::Integer(v) => format!("{:#x}", v),
+                ValueRef::Integer(v) => {
+                    if print_int_as_decimal {
+                        v.to_string()
+                    } else {
+                        format!("{:#x}", v)
+                    }
+                },
                 ValueRef::Real(v) => v.to_string(),
                 ValueRef::Text(v) => String::from_utf8_lossy(v).to_string(),
                 ValueRef::Blob(v) => format!("<{}-byte blob>", v.len()),
@@ -125,32 +140,49 @@ fn process_query_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
         }
         ptable.add_row(prettytable::Row::new(cells));
     }
-    print(ptable.to_string())?;
+    print(ptable.to_string());
     Ok(())
 }
 
-static mut CONSOLE_CONTEXT: Option<*const *const c_void> = None;
-static mut PRINT_TO_CONSOLE: Option<fn(*const c_void, *const c_char) -> ()> = None;
+struct State {
+    console_context: *const *const c_void,
+    print_to_console: extern "C" fn(*const c_void, *const c_char, ...) -> (),
+}
+unsafe impl Sync for State {}
+static S: LateStatic<State> = LateStatic::new();
 
-pub(crate) fn print<T: Into<Vec<u8>>>(msg: T) -> anyhow::Result<()> {
-    let msg = String::from_utf8(msg.into())?;
-    let msg = CString::new(msg)?;
+pub(crate) fn print<T: Into<Vec<u8>>>(msg: T) {
+    let msg = msg.into();
+    let msg = String::from_utf8_lossy(msg.as_ref());
+    let msgs = msg.split("\n");
+    // The print_to_console's internal buffer size is 1024.
+    // ensure each lines not to overflow
+    let chunks = msgs.flat_map(|msg| msg.as_bytes().chunks(1024));
+    let chunks: Vec<Result<CString, _>> = chunks.map(CString::new).collect();
 
-    unsafe {
-        if let Some(print_to_console) = PRINT_TO_CONSOLE {
-            if let Some(console_context) = CONSOLE_CONTEXT {
-                if *console_context != std::ptr::null() {
-                    print_to_console(*console_context, msg.as_c_str().as_ptr());
+    let result: anyhow::Result<()> = try {
+        unsafe {
+            let console_context = S.console_context;
+            if *console_context != std::ptr::null() {
+                for msg in chunks {
+                    (S.print_to_console)(
+                        *console_context,
+                        "%s\0".as_ptr() as *const c_char,
+                        msg?.as_c_str().as_ptr(),
+                    );
                 }
             }
         }
-    }
-    Ok(())
+    };
+
+    result.logging_ok();
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    CONSOLE_CONTEXT = Some(transmute(image_base + 0x2f000f0));
-    PRINT_TO_CONSOLE = Some(transmute(image_base + 0x85c290));
+    LateStatic::assign(&S, State {
+        console_context: transmute(image_base + 0x2f000f0),
+        print_to_console: transmute(image_base + 0x85c290),
+    });
 
     let target_addr = transmute(image_base + 0x2e75f0);
     ProcessConsoleInput.initialize(target_addr, new_process_console_input)
