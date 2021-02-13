@@ -55,6 +55,8 @@ struct State {
     quest_vtable: usize,
     quest_load: fn(&TESQuest, u64) -> u64,
     quest_get_edid: fn(&TESQuest) -> *const c_char,
+    #[allow(dead_code)]
+    quest_get_description: fn(&LogEntry, &TESQuest, u64, u64) -> *const c_char,
     task_queue: Sender<Job>,
 }
 unsafe impl Sync for State {}
@@ -134,12 +136,23 @@ impl TESQuest {
         }
     }
 
+    // NOTE: This function only works when a save has been loaded.
+    #[allow(dead_code)]
+    fn get_log_description(&self, log: &LogEntry) -> std::borrow::Cow<str> {
+        let s = (S.quest_get_description)(log, self, 0, 0);
+        if s.is_null() {
+            return std::borrow::Cow::from("");
+        }
+        unsafe {
+            CStr::from_ptr(s).to_string_lossy()
+        }
+    }
+
     fn new_load(&self, arg: u64) -> u64 {
         let ret = (S.quest_load)(self, arg);
         let form_id = self.0.form_id;
         let editor_id = self.get_edid().map(|name| name.to_string());
         let name = self.0.get_name().map(|name| name.to_string());
-        let slf = unsafe { transmute::<&Self, &'static Self>(self) };
         let result: anyhow::Result<()> = try {
             S.task_queue.send(Box::new(move |db| {
                 db.prepare_cached(
@@ -147,17 +160,24 @@ impl TESQuest {
                 ).context("quest_new_load prepare")?
                     .execute(params![form_id, editor_id, name]).context("quest_new_load execute")?;
 
-                for (index, log_entries) in slf.traverse().iter() {
-                    for log in log_entries.iter() {
+                Ok(())
+            })).map_err(|e| anyhow!(e.to_string()))?;
+
+            for (index, log_entries) in self.traverse().iter() {
+                for log in log_entries.iter() {
+                    let stage = index.stage;
+                    let log_string_offset = log.string_offset;
+                    S.task_queue.send(Box::new(move |db| {
                         db.prepare_cached(
                             "INSERT OR REPLACE INTO quest_stage (form_id, stage, log) VALUES (?, ?, ?);",
                         ).context("quest_new_load prepare")?
-                            .execute(params![form_id, index.stage, log.string_offset]).context("quest_new_load execute")?;
-                    }
-                }
+                            .execute(params![form_id, stage, log_string_offset])
+                            .context("quest_new_load execute")?;
 
-                Ok(())
-            })).map_err(|e| anyhow!(e.to_string()))?;
+                        Ok(())
+                    })).map_err(|e| anyhow!(e.to_string()))?;
+                }
+            }
         };
         result.logging_ok();
         return ret;
@@ -166,6 +186,7 @@ impl TESQuest {
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     let quest_vtable = transmute(image_base + 0x15a1c98);
+    let quest_get_description = transmute(image_base + 0x382720);
 
     let original_quest_load = patch_bytes(
         &(TESQuest::new_load as usize),
@@ -177,6 +198,7 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
         quest_vtable,
         quest_load: transmute(*(original_quest_load.as_ptr() as *const usize)),
         quest_get_edid: transmute(*((quest_vtable + 0x190) as *const usize)),
+        quest_get_description,
         task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
     });
 
