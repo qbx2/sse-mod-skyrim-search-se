@@ -1,22 +1,22 @@
 #![feature(try_blocks)]
 #![feature(try_trait)]
 
-mod log;
-mod console;
-mod form;
-mod patch;
-mod db;
 mod app;
+mod console;
+mod db;
+mod form;
+mod log;
+mod patch;
 
-use winapi::ctypes::c_void;
-use win_dbg_logger::output_debug_string;
-use std::fmt::{Debug, Formatter};
-use std::{fmt, ptr};
-use winapi::um::libloaderapi::GetModuleHandleA;
-use std::os::raw::c_char;
-use std::io::Write;
-use anyhow::Context;
 use crate::log::Loggable;
+use anyhow::Context;
+use std::fmt::{Debug, Formatter};
+use std::io::Write;
+use std::os::raw::c_char;
+use std::{fmt, ptr};
+use win_dbg_logger::output_debug_string;
+use winapi::ctypes::c_void;
+use winapi::um::libloaderapi::GetModuleHandleA;
 
 const DEBUG: bool = true;
 
@@ -40,8 +40,8 @@ impl Debug for SKSEInterface {
         f.debug_struct("SKSEInterface")
             .field("skse_version", &self.skse_version)
             .field("runtime_version", &self.runtime_version)
-            .field("plugin_handle",  &(self.get_plugin_handle)())
-            .field("release_index",  &(self.get_release_index)())
+            .field("plugin_handle", &(self.get_plugin_handle)())
+            .field("release_index", &(self.get_release_index)())
             .finish()
     }
 }
@@ -58,12 +58,15 @@ pub struct PluginInfo {
 }
 
 #[no_mangle]
-pub extern fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
+pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
     let skse = unsafe { &*skse };
     let mut info = unsafe { &mut *info };
 
-    if skse.runtime_version != 0x01050610 { // 1.5.97
-        output_debug_string(format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str());
+    if skse.runtime_version != 0x01050610 {
+        // 1.5.97
+        output_debug_string(
+            format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str(),
+        );
         return false;
     }
 
@@ -74,7 +77,7 @@ pub extern fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo
 }
 
 #[no_mangle]
-pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
+pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
     std::panic::set_hook(Box::new(|info| {
         let msg = info.to_string();
         output_debug_string(msg.as_str());
@@ -87,24 +90,32 @@ pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
     lazy_static::initialize(&log::LOG);
     output_debug_string(format!("ssse skse load: {:#?}", skse).as_str());
 
-    let result: anyhow::Result<()> = try { unsafe {
-        let image_base = GetModuleHandleA(ptr::null()) as usize;
+    let result: anyhow::Result<()> = try {
+        unsafe {
+            let image_base = GetModuleHandleA(ptr::null()) as usize;
 
-        console::init(image_base).context("console::init")?;
-        form::init(image_base).context("form::init")?;
-        app::init(image_base).context("form::init")?;
-    }};
+            console::init(image_base).context("console::init")?;
+            form::init(image_base).context("form::init")?;
+            app::init(image_base).context("form::init")?;
+        }
+    };
 
     lazy_static::initialize(&db::DB);
 
     if let Err(err) = result {
-        log::LOG.lock().unwrap()
-            .write_all(format!("error SKSEPlugin_Load: {}\n", err).as_bytes()).unwrap();
+        log::LOG
+            .lock()
+            .unwrap()
+            .write_all(format!("error SKSEPlugin_Load: {}\n", err).as_bytes())
+            .unwrap();
         return false;
     }
 
-    log::LOG.lock().unwrap()
-        .write_all("SkyrimSearchSe is ready".as_bytes()).logging_ok();
+    log::LOG
+        .lock()
+        .unwrap()
+        .write_all("SkyrimSearchSe is ready".as_bytes())
+        .logging_ok();
 
     output_debug_string("SkyrimSearchSe is ready");
 

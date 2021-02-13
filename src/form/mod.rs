@@ -1,21 +1,21 @@
 use anyhow::Context;
-use std::ffi::CStr;
-use winapi::ctypes::c_char;
 use late_static::LateStatic;
+use std::ffi::CStr;
 use std::mem::transmute;
+use winapi::ctypes::c_char;
 
-mod npc;
 mod achr;
-mod refr;
 mod cell;
+mod npc;
 pub(crate) mod qust;
+mod refr;
 
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct TESForm {
     unknown_00: u64,
     unknown_08: u64,
-    flags: u32, // 10
+    flags: u32,   // 10
     form_id: u32, // 14
     unknown_18: u16,
     form_type: u8, // 1A
@@ -51,10 +51,13 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     let get_name = transmute(image_base + 0x196e10);
     let look_up_by_id = transmute(image_base + 0x194230);
 
-    LateStatic::assign(&S, State {
-        get_name,
-        look_up_by_id,
-    });
+    LateStatic::assign(
+        &S,
+        State {
+            get_name,
+            look_up_by_id,
+        },
+    );
 
     npc::init(image_base).context("npc::init")?;
     achr::init(image_base).context("achr::init")?;

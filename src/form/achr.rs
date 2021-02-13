@@ -1,17 +1,17 @@
-use anyhow::{anyhow, Context};
-use winapi::ctypes::c_void;
-use win_dbg_logger::output_debug_string;
-use crate::patch::patch_bytes;
 use crate::db;
-use rusqlite::params;
-use std::mem::transmute;
-use late_static::LateStatic;
-use std::fmt::Formatter;
-use std::ops::Deref;
-use crate::log::Loggable;
-use crate::form::refr::TESObjectREFR;
-use std::sync::mpsc::Sender;
 use crate::db::Job;
+use crate::form::refr::TESObjectREFR;
+use crate::log::Loggable;
+use crate::patch::patch_bytes;
+use anyhow::{anyhow, Context};
+use late_static::LateStatic;
+use rusqlite::params;
+use std::fmt::Formatter;
+use std::mem::transmute;
+use std::ops::Deref;
+use std::sync::mpsc::Sender;
+use win_dbg_logger::output_debug_string;
+use winapi::ctypes::c_void;
 
 struct TESCharacter(TESObjectREFR);
 
@@ -42,13 +42,17 @@ impl TESCharacter {
         };
         let form_id = self.0.form.form_id;
         let result: anyhow::Result<()> = try {
-            S.task_queue.send(Box::new(move |db| {
-                db.prepare_cached(
-                    "INSERT OR REPLACE INTO actor (form_id, base_form_id) VALUES (?, ?);",
-                ).context("chracter_new_load prepare")?
-                    .execute(params![form_id, base_form.form_id]).context("character_new_load execute")?;
-                Ok(())
-            })).map_err(|e| anyhow!(e.to_string()))?;
+            S.task_queue
+                .send(Box::new(move |db| {
+                    db.prepare_cached(
+                        "INSERT OR REPLACE INTO actor (form_id, base_form_id) VALUES (?, ?);",
+                    )
+                    .context("chracter_new_load prepare")?
+                    .execute(params![form_id, base_form.form_id])
+                    .context("character_new_load execute")?;
+                    Ok(())
+                }))
+                .map_err(|e| anyhow!(e.to_string()))?;
         };
         result.logging_ok();
         return ret;
@@ -64,11 +68,14 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
         8,
     )?;
 
-    LateStatic::assign(&S, State {
-        character_vtable,
-        character_load: transmute(*(original_character_load.as_ptr() as *const usize)),
-        task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
-    });
+    LateStatic::assign(
+        &S,
+        State {
+            character_vtable,
+            character_load: transmute(*(original_character_load.as_ptr() as *const usize)),
+            task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
+        },
+    );
 
     output_debug_string(format!("S: {:#x?}", S.deref()).as_str());
 

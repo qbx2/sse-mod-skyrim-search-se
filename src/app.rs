@@ -1,23 +1,23 @@
 use std::ffi::CStr;
 use std::intrinsics::transmute;
 use std::option::NoneError;
-use std::sync::{Arc, Condvar, Mutex};
 use std::sync::mpsc::Sender;
+use std::sync::{Arc, Condvar, Mutex};
 
 use anyhow::{anyhow, Context};
 use clap::{AppSettings, Arg, SubCommand};
-use rusqlite::{NO_PARAMS, Statement};
-use rusqlite::types::ValueRef;
 use rusqlite::params;
+use rusqlite::types::ValueRef;
+use rusqlite::{Statement, NO_PARAMS};
 
-use crate::{console, db};
+use crate::db::Job;
 use crate::form::qust::TESQuest;
 use crate::form::TESForm;
+use crate::log::Loggable;
+use crate::{console, db};
+use late_static::LateStatic;
 use win_dbg_logger::output_debug_string;
 use winapi::ctypes::c_char;
-use crate::log::Loggable;
-use crate::db::Job;
-use late_static::LateStatic;
 
 pub(crate) enum ProcessResult {
     Processed,
@@ -33,48 +33,65 @@ pub fn get_clap<'a, 'b>() -> clap::App<'a, 'b> {
         .setting(AppSettings::DisableHelpSubcommand)
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .arg(Arg::with_name("debug")
-                .long("debug")
-                .global(true))
-        .subcommand(SubCommand::with_name("raw")
-            .about("execute raw query. quote your query as in unix shell if needed.")
-            .setting(AppSettings::TrailingVarArg)
-            .arg(Arg::with_name("sql")
-                .help("SQLite SQL")
-                .required(true)
-                .multiple(true)))
-        .subcommand(SubCommand::with_name("npc")
-            .alias("npcs")
-            .about("search npc/reference")
-            .arg(Arg::with_name("query")
-                .help("search query (e.g. name, edid, form_id, ref_id)")
-                .required(true)
-                .multiple(true)))
-        .subcommand(SubCommand::with_name("cell")
-            .alias("cells")
-            .about("search cell (location)")
-            .arg(Arg::with_name("query")
-                .help("search query (e.g. name, edid, form_id)")
-                .required(true)
-                .multiple(true)))
-        .subcommand(SubCommand::with_name("quest")
-            .alias("quests")
-            .about("search quest")
-            .arg(Arg::with_name("query")
-                .help("search query (e.g. name, edid, form_id)")
-                .required(true)
-                .multiple(true)))
-        .subcommand(SubCommand::with_name("quest_stage")
-            .alias("quest_stages")
-            .alias("qs")
-            .alias("queststage")
-            .alias("queststages")
-            .about("search quest (prints additional stage information)")
-            .arg(Arg::with_name("query")
-                .help("search query (e.g. name, edid, form_id)")
-                .required(true)
-                .multiple(true))
-    )
+        .arg(Arg::with_name("debug").long("debug").global(true))
+        .subcommand(
+            SubCommand::with_name("raw")
+                .about("execute raw query. quote your query as in unix shell if needed.")
+                .setting(AppSettings::TrailingVarArg)
+                .arg(
+                    Arg::with_name("sql")
+                        .help("SQLite SQL")
+                        .required(true)
+                        .multiple(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("npc")
+                .alias("npcs")
+                .about("search npc/reference")
+                .arg(
+                    Arg::with_name("query")
+                        .help("search query (e.g. name, edid, form_id, ref_id)")
+                        .required(true)
+                        .multiple(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("cell")
+                .alias("cells")
+                .about("search cell (location)")
+                .arg(
+                    Arg::with_name("query")
+                        .help("search query (e.g. name, edid, form_id)")
+                        .required(true)
+                        .multiple(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("quest")
+                .alias("quests")
+                .about("search quest")
+                .arg(
+                    Arg::with_name("query")
+                        .help("search query (e.g. name, edid, form_id)")
+                        .required(true)
+                        .multiple(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("quest_stage")
+                .alias("quest_stages")
+                .alias("qs")
+                .alias("queststage")
+                .alias("queststages")
+                .about("search quest (prints additional stage information)")
+                .arg(
+                    Arg::with_name("query")
+                        .help("search query (e.g. name, edid, form_id)")
+                        .required(true)
+                        .multiple(true),
+                ),
+        )
 }
 
 struct State {
@@ -83,11 +100,9 @@ struct State {
 unsafe impl Sync for State {}
 static S: LateStatic<State> = LateStatic::new();
 
-
 pub(crate) fn process_console_input(param1: usize) -> anyhow::Result<ProcessResult> {
-    let input = match unsafe {
-        CStr::from_ptr(*((param1 + 0x38) as *const *const c_char)).to_str()
-    } {
+    let input = match unsafe { CStr::from_ptr(*((param1 + 0x38) as *const *const c_char)).to_str() }
+    {
         Ok(input) => input,
         Err(err) => {
             output_debug_string(err.to_string().as_str());
@@ -114,7 +129,7 @@ pub(crate) fn process_console_input(param1: usize) -> anyhow::Result<ProcessResu
             Ok(ProcessResult::FallbackAndPrintUsage)
         } else {
             Ok(ProcessResult::Fallback)
-        }
+        };
     }
 
     let matches = get_clap().get_matches_from_safe(input)?;
@@ -127,16 +142,21 @@ pub(crate) fn process_console_input(param1: usize) -> anyhow::Result<ProcessResu
     CREATE_INDEX.call_once(|| {
         let pair = Arc::new((Mutex::new(()), Condvar::new()));
         let pair2 = Arc::clone(&pair);
-        S.task_queue.send(Box::new(move |db| {
-            db::init_index(db).logging_ok();
+        S.task_queue
+            .send(Box::new(move |db| {
+                db::init_index(db).logging_ok();
 
-            pair2.1.notify_one();
+                pair2.1.notify_one();
 
-            Ok(())
-        })).map_err(|e| anyhow!(e.to_string())).logging_ok();
+                Ok(())
+            }))
+            .map_err(|e| anyhow!(e.to_string()))
+            .logging_ok();
         let (lock, cond) = &*pair;
         if let Ok(guard) = lock.lock() {
-            cond.wait(guard).map_err(|e| anyhow!(e.to_string())).logging_ok();
+            cond.wait(guard)
+                .map_err(|e| anyhow!(e.to_string()))
+                .logging_ok();
         };
     });
 
@@ -155,7 +175,11 @@ pub(crate) fn process_console_input(param1: usize) -> anyhow::Result<ProcessResu
 }
 
 pub fn process_raw_query_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
-    let sql = matches.values_of("sql").unwrap().collect::<Vec<&str>>().join(" ");
+    let sql = matches
+        .values_of("sql")
+        .unwrap()
+        .collect::<Vec<&str>>()
+        .join(" ");
     let db = db::DB.lock().unwrap();
     let mut stmt: Statement = db.prepare(sql.as_str()).context("prepare error")?;
 
@@ -171,37 +195,47 @@ pub fn process_raw_query_command(matches: &clap::ArgMatches) -> anyhow::Result<(
 
 pub fn process_npc_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let db = db::DB.lock().unwrap();
-    let query: String = matches.values_of("query").unwrap().collect::<Vec<&str>>().join(" ");
+    let query: String = matches
+        .values_of("query")
+        .unwrap()
+        .collect::<Vec<&str>>()
+        .join(" ");
 
     let mut stmt;
     let rows;
 
     if let Ok(id) = i64::from_str_radix(query.trim_start_matches("0x"), 16) {
-        stmt = db.prepare_cached(
-            "SELECT npc.*, actor.form_id as ref_id FROM npc \
+        stmt = db
+            .prepare_cached(
+                "SELECT npc.*, actor.form_id as ref_id FROM npc \
              LEFT JOIN actor ON npc.form_id = actor.base_form_id \
              WHERE npc.editor_id LIKE ?1 OR npc.name LIKE ?1 \
-             OR npc.form_id=?2 OR actor.form_id=?2"
-        ).context("prepare error")?;
+             OR npc.form_id=?2 OR actor.form_id=?2",
+            )
+            .context("prepare error")?;
 
         if matches.is_present("debug") {
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query), id])
+        rows = stmt
+            .query(params![format!("%{}%", query), id])
             .context("query error")?;
     } else {
-        stmt = db.prepare_cached(
-            "SELECT npc.*, actor.form_id as ref_id FROM npc \
+        stmt = db
+            .prepare_cached(
+                "SELECT npc.*, actor.form_id as ref_id FROM npc \
              LEFT JOIN actor ON npc.form_id = actor.base_form_id \
-             WHERE npc.editor_id LIKE ?1 OR npc.name LIKE ?1"
-        ).context("prepare error")?;
+             WHERE npc.editor_id LIKE ?1 OR npc.name LIKE ?1",
+            )
+            .context("prepare error")?;
 
         if matches.is_present("debug") {
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query)])
+        rows = stmt
+            .query(params![format!("%{}%", query)])
             .context("query error")?;
     }
 
@@ -212,32 +246,40 @@ pub fn process_npc_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
 
 pub fn process_cell_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let db = db::DB.lock().unwrap();
-    let query: String = matches.values_of("query").unwrap().collect::<Vec<&str>>().join(" ");
+    let query: String = matches
+        .values_of("query")
+        .unwrap()
+        .collect::<Vec<&str>>()
+        .join(" ");
 
     let mut stmt;
     let rows;
 
     if let Ok(id) = i64::from_str_radix(query.trim_start_matches("0x"), 16) {
-        stmt = db.prepare_cached(
-            "SELECT * FROM cell WHERE editor_id LIKE ?1 OR name LIKE ?1 OR form_id=?2"
-        ).context("prepare error")?;
+        stmt = db
+            .prepare_cached(
+                "SELECT * FROM cell WHERE editor_id LIKE ?1 OR name LIKE ?1 OR form_id=?2",
+            )
+            .context("prepare error")?;
 
         if matches.is_present("debug") {
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query), id])
+        rows = stmt
+            .query(params![format!("%{}%", query), id])
             .context("query error")?;
     } else {
-        stmt = db.prepare_cached(
-            "SELECT * FROM cell WHERE editor_id LIKE ?1 OR name LIKE ?1"
-        ).context("prepare error")?;
+        stmt = db
+            .prepare_cached("SELECT * FROM cell WHERE editor_id LIKE ?1 OR name LIKE ?1")
+            .context("prepare error")?;
 
         if matches.is_present("debug") {
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query)])
+        rows = stmt
+            .query(params![format!("%{}%", query)])
             .context("query error")?;
     }
 
@@ -248,32 +290,40 @@ pub fn process_cell_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
 
 pub fn process_quest_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let db = db::DB.lock().unwrap();
-    let query: String = matches.values_of("query").unwrap().collect::<Vec<&str>>().join(" ");
+    let query: String = matches
+        .values_of("query")
+        .unwrap()
+        .collect::<Vec<&str>>()
+        .join(" ");
 
     let mut stmt;
     let rows;
 
     if let Ok(id) = i64::from_str_radix(query.trim_start_matches("0x"), 16) {
-        stmt = db.prepare_cached(
-            "SELECT * FROM quest WHERE editor_id LIKE ?1 OR name LIKE ?1 OR form_id=?2"
-        ).context("prepare error")?;
+        stmt = db
+            .prepare_cached(
+                "SELECT * FROM quest WHERE editor_id LIKE ?1 OR name LIKE ?1 OR form_id=?2",
+            )
+            .context("prepare error")?;
 
         if matches.is_present("debug") {
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query), id])
+        rows = stmt
+            .query(params![format!("%{}%", query), id])
             .context("query error")?;
     } else {
-        stmt = db.prepare_cached(
-            "SELECT * FROM quest WHERE editor_id LIKE ?1 OR name LIKE ?1"
-        ).context("prepare error")?;
+        stmt = db
+            .prepare_cached("SELECT * FROM quest WHERE editor_id LIKE ?1 OR name LIKE ?1")
+            .context("prepare error")?;
 
         if matches.is_present("debug") {
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query)])
+        rows = stmt
+            .query(params![format!("%{}%", query)])
             .context("query error")?;
     }
 
@@ -284,7 +334,11 @@ pub fn process_quest_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
 
 pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<()> {
     let db = db::DB.lock().unwrap();
-    let query: String = matches.values_of("query").unwrap().collect::<Vec<&str>>().join(" ");
+    let query: String = matches
+        .values_of("query")
+        .unwrap()
+        .collect::<Vec<&str>>()
+        .join(" ");
 
     let mut stmt;
     let rows;
@@ -299,20 +353,24 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query), id])
+        rows = stmt
+            .query(params![format!("%{}%", query), id])
             .context("query error")?;
     } else {
-        stmt = db.prepare_cached(
-            "SELECT quest.*, stage, log FROM quest LEFT JOIN quest_stage \
+        stmt = db
+            .prepare_cached(
+                "SELECT quest.*, stage, log FROM quest LEFT JOIN quest_stage \
              ON quest.form_id = quest_stage.form_id \
-             WHERE log IS NOT NULL AND (quest.editor_id LIKE ?1 OR quest.name LIKE ?1)"
-        ).context("prepare error")?;
+             WHERE log IS NOT NULL AND (quest.editor_id LIKE ?1 OR quest.name LIKE ?1)",
+            )
+            .context("prepare error")?;
 
         if matches.is_present("debug") {
             console::print(format!("stmt: {:?}", *stmt));
         }
 
-        rows = stmt.query(params![format!("%{}%", query)])
+        rows = stmt
+            .query(params![format!("%{}%", query)])
             .context("query error")?;
     }
 
@@ -321,7 +379,7 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
     let num_rows = print_rows(rows, |row: &rusqlite::Row| {
         let column_count = row.column_count();
         let mut cells = Vec::with_capacity(column_count);
-        for i in 0..column_count-1 {
+        for i in 0..column_count - 1 {
             let column = row.get_raw(i);
             let repr = repr_column(row.column_name(i).ok(), column);
             cells.push(prettytable::Cell::new(repr.as_str()));
@@ -330,7 +388,9 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
             let form_id = row.get_raw("form_id").as_i64()?;
             let stage = row.get_raw("stage").as_i64()?;
             let quest: &TESQuest = unsafe { transmute(TESForm::look_up_by_id(form_id as u32)) };
-            let index = quest.get_log(stage as u16).ok_or_else(|| anyhow!("invalid data"))?;
+            let index = quest
+                .get_log(stage as u16)
+                .ok_or_else(|| anyhow!("invalid data"))?;
             let log_entry = index.head.into_iter().next();
             if let Some(log_entry) = log_entry {
                 quest.get_log_description(unsafe { &*log_entry })
@@ -339,7 +399,9 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
             }
         };
         cells.push(prettytable::Cell::new(
-            description.unwrap_or_else(|e| e.to_string().into()).as_ref()
+            description
+                .unwrap_or_else(|e| e.to_string().into())
+                .as_ref(),
         ));
         prettytable::Row::new(cells)
     })?;
@@ -352,7 +414,9 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
 }
 
 fn print_rows<F>(mut rows: rusqlite::Rows, f: F) -> anyhow::Result<usize>
-where F: Fn(&rusqlite::Row) -> prettytable::Row {
+where
+    F: Fn(&rusqlite::Row) -> prettytable::Row,
+{
     let mut num_rows = 0;
 
     if rows.column_count().is_none() {
@@ -394,11 +458,9 @@ fn convert_row(row: &rusqlite::Row) -> prettytable::Row {
 fn repr_column(name: Option<&str>, column: ValueRef) -> String {
     match column {
         ValueRef::Null => String::from("<null>"),
-        ValueRef::Integer(v) => {
-            match name {
-                Some(name) if name.contains("id") => format!("{:08X}", v),
-                _ => v.to_string(),
-            }
+        ValueRef::Integer(v) => match name {
+            Some(name) if name.contains("id") => format!("{:08X}", v),
+            _ => v.to_string(),
         },
         ValueRef::Real(v) => v.to_string(),
         ValueRef::Text(v) => String::from_utf8_lossy(v).to_string(),
@@ -409,19 +471,17 @@ fn repr_column(name: Option<&str>, column: ValueRef) -> String {
 fn set_titles(rows: &mut rusqlite::Rows, table: &mut prettytable::Table) -> Result<(), NoneError> {
     let names = rows.column_names()?;
     table.set_format(*prettytable::format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
-    table.set_titles(
-        names
-            .into_iter()
-            .map(prettytable::Cell::new)
-            .collect()
-    );
+    table.set_titles(names.into_iter().map(prettytable::Cell::new).collect());
     Ok(())
 }
 
 pub(crate) unsafe fn init(_image_base: usize) -> anyhow::Result<()> {
-    LateStatic::assign(&S, State {
-        task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
-    });
+    LateStatic::assign(
+        &S,
+        State {
+            task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
+        },
+    );
 
     Ok(())
 }

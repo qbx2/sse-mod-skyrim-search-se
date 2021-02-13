@@ -17,9 +17,11 @@ static_detour! {
 fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i64) {
     let result = app::process_console_input(param1);
     match result {
-        Ok(app::ProcessResult::Processed) => {},
+        Ok(app::ProcessResult::Processed) => {}
         Err(err) => print(format!("{:#}", err)),
-        Ok(app::ProcessResult::Fallback) => ProcessConsoleInput.call(param1, param2, param3, param4),
+        Ok(app::ProcessResult::Fallback) => {
+            ProcessConsoleInput.call(param1, param2, param3, param4)
+        }
         Ok(app::ProcessResult::FallbackAndPrintUsage) => {
             ProcessConsoleInput.call(param1, param2, param3, param4);
             print("skyrim-search-se usage: ss --help");
@@ -62,13 +64,17 @@ pub(crate) fn print<T: Into<Vec<u8>>>(msg: T) {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    LateStatic::assign(&S, State {
-        console_context: transmute(image_base + 0x2f000f0),
-        print_to_console: transmute(image_base + 0x85c290),
-    });
+    LateStatic::assign(
+        &S,
+        State {
+            console_context: transmute(image_base + 0x2f000f0),
+            print_to_console: transmute(image_base + 0x85c290),
+        },
+    );
 
     let target_addr = transmute(image_base + 0x2e75f0);
-    ProcessConsoleInput.initialize(target_addr, new_process_console_input)
+    ProcessConsoleInput
+        .initialize(target_addr, new_process_console_input)
         .context("initialize")?;
     ProcessConsoleInput.enable().context("enable")?;
 

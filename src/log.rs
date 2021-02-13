@@ -1,17 +1,19 @@
-use std::io::LineWriter;
+use anyhow::{anyhow, Context};
+use lazy_static::lazy_static;
 use std::ffi::CStr;
 use std::fs::File;
+use std::io::LineWriter;
+use std::io::Write;
 use std::sync::Mutex;
+use win_dbg_logger::output_debug_string;
 use winapi::shared::minwindef::MAX_PATH;
 use winapi::shared::ntdef::NULL;
 use winapi::shared::windef::HWND;
 use winapi::shared::winerror::S_OK;
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::shlobj::{CSIDL_MYDOCUMENTS, CSIDL_FLAG_CREATE, SHGFP_TYPE_CURRENT, SHGetFolderPathA};
-use win_dbg_logger::output_debug_string;
-use lazy_static::lazy_static;
-use anyhow::{anyhow, Context};
-use std::io::Write;
+use winapi::um::shlobj::{
+    SHGetFolderPathA, CSIDL_FLAG_CREATE, CSIDL_MYDOCUMENTS, SHGFP_TYPE_CURRENT,
+};
 
 const LOG_PATH: &str = "\\My Games\\Skyrim Special Edition\\SKSE\\skyrim-search-se.log";
 
@@ -38,7 +40,11 @@ fn open_log_file() -> anyhow::Result<LineWriter<File>> {
             path.as_mut_ptr(),
         );
         if result != S_OK {
-            anyhow::bail!("failed to SHGetFolderPathA, ret = {}, err = {}", result, GetLastError());
+            anyhow::bail!(
+                "failed to SHGetFolderPathA, ret = {}, err = {}",
+                result,
+                GetLastError()
+            );
         }
 
         let path = String::from(CStr::from_ptr(path.as_ptr()).to_str()?) + LOG_PATH;
@@ -60,7 +66,8 @@ impl<T, E: Into<anyhow::Error>> Loggable<T> for Result<T, E> {
                 let result: anyhow::Result<()> = try {
                     let err = err.into();
                     output_debug_string(format!("{:#}", err).as_str());
-                    LOG.lock().map_err(|e| anyhow!(e.to_string()))?
+                    LOG.lock()
+                        .map_err(|e| anyhow!(e.to_string()))?
                         .write_all(format!("{:#}", err).as_bytes())?
                 };
                 if let Err(err) = result {

@@ -1,8 +1,8 @@
-use win_dbg_logger::output_debug_string;
-use std::sync::Mutex;
+use crate::log::Loggable;
 use anyhow::Context;
 use lazy_static::lazy_static;
-use crate::log::Loggable;
+use std::sync::Mutex;
+use win_dbg_logger::output_debug_string;
 
 lazy_static! {
     pub static ref DB: Mutex<rusqlite::Connection> = {
@@ -14,7 +14,6 @@ lazy_static! {
             }
         }
     };
-
     pub static ref TASK_QUEUE: Mutex<std::sync::mpsc::Sender<Job>> = {
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(|| Worker(rx).worker());
@@ -31,7 +30,8 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
         rusqlite::Connection::open("").context("open error")?
     };
 
-    conn.execute_batch(r#"
+    conn.execute_batch(
+        r#"
         PRAGMA mmap_size=268435456;
         PRAGMA synchronous=OFF;
         PRAGMA journal_mode=OFF;
@@ -71,13 +71,15 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
             PRIMARY KEY (form_id, stage)
         );
         "#,
-    ).context("init_schema error")?;
+    )
+    .context("init_schema error")?;
 
     Ok(conn)
 }
 
 pub(crate) fn init_index(db: &rusqlite::Connection) -> rusqlite::Result<()> {
-    db.execute_batch(r#"
+    db.execute_batch(
+        r#"
         CREATE INDEX IF NOT EXISTS npc_editor_id ON npc (editor_id);
         CREATE INDEX IF NOT EXISTS npc_name ON npc (name);
 
@@ -93,7 +95,8 @@ pub(crate) fn init_index(db: &rusqlite::Connection) -> rusqlite::Result<()> {
         CREATE INDEX IF NOT EXISTS quest_stage_editor_id ON quest_stage (editor_id);
         CREATE INDEX IF NOT EXISTS quest_stage_log ON quest_stage (log);
         CREATE INDEX IF NOT EXISTS quest_stage_name ON quest_stage (name);
-     "#)
+     "#,
+    )
 }
 
 struct Worker(std::sync::mpsc::Receiver<Job>);

@@ -1,18 +1,18 @@
-use anyhow::{anyhow, Context};
-use winapi::ctypes::{c_void, c_char};
-use std::ffi::CStr;
-use win_dbg_logger::output_debug_string;
-use crate::patch::patch_bytes;
 use crate::db;
-use rusqlite::params;
-use std::mem::transmute;
-use late_static::LateStatic;
-use std::fmt::Formatter;
-use std::ops::Deref;
-use crate::log::Loggable;
-use crate::form::TESForm;
-use std::sync::mpsc::Sender;
 use crate::db::Job;
+use crate::form::TESForm;
+use crate::log::Loggable;
+use crate::patch::patch_bytes;
+use anyhow::{anyhow, Context};
+use late_static::LateStatic;
+use rusqlite::params;
+use std::ffi::CStr;
+use std::fmt::Formatter;
+use std::mem::transmute;
+use std::ops::Deref;
+use std::sync::mpsc::Sender;
+use win_dbg_logger::output_debug_string;
+use winapi::ctypes::{c_char, c_void};
 
 struct TESNPC(TESForm);
 
@@ -42,14 +42,18 @@ impl TESNPC {
             let form_id = self.0.form_id;
             let edid = unsafe { CStr::from_ptr(edid).to_str()? }.to_string();
 
-            S.task_queue.send(Box::new(move |db| {
-                db.prepare_cached(
-                    "INSERT INTO npc (form_id, editor_id) VALUES (?, ?)\
+            S.task_queue
+                .send(Box::new(move |db| {
+                    db.prepare_cached(
+                        "INSERT INTO npc (form_id, editor_id) VALUES (?, ?)\
                      ON CONFLICT(form_id) DO UPDATE SET editor_id=excluded.editor_id",
-                ).context("npc_set_edid prepare")?
-                    .execute(params![form_id, edid]).context("npc_set_edid execute")?;
-                Ok(())
-            })).map_err(|e| anyhow!(e.to_string()))?;
+                    )
+                    .context("npc_set_edid prepare")?
+                    .execute(params![form_id, edid])
+                    .context("npc_set_edid execute")?;
+                    Ok(())
+                }))
+                .map_err(|e| anyhow!(e.to_string()))?;
         };
         result.logging_ok().is_some()
     }
@@ -60,14 +64,18 @@ impl TESNPC {
         if let Some(name) = self.0.get_name() {
             let result: anyhow::Result<()> = try {
                 let name = name.to_string();
-                S.task_queue.send(Box::new(move |db| {
-                    db.prepare_cached(
-                        "INSERT INTO npc (form_id, name) VALUES (?, ?)\
+                S.task_queue
+                    .send(Box::new(move |db| {
+                        db.prepare_cached(
+                            "INSERT INTO npc (form_id, name) VALUES (?, ?)\
                          ON CONFLICT(form_id) DO UPDATE SET name=excluded.name",
-                    ).context("npc_new_load prepare")?
-                        .execute(params![form_id, name]).context("npc_new_load execute")?;
-                    Ok(())
-                })).map_err(|e| anyhow!(e.to_string()))?;
+                        )
+                        .context("npc_new_load prepare")?
+                        .execute(params![form_id, name])
+                        .context("npc_new_load execute")?;
+                        Ok(())
+                    }))
+                    .map_err(|e| anyhow!(e.to_string()))?;
             };
             result.logging_ok();
         }
@@ -80,18 +88,25 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
 
     output_debug_string(format!("npc set_edid: {:#x}", npc_vtable + 0x198).as_str());
 
-    patch_bytes(&(TESNPC::new_set_edid as usize), (npc_vtable + 0x198) as *mut c_void, 8)?;
+    patch_bytes(
+        &(TESNPC::new_set_edid as usize),
+        (npc_vtable + 0x198) as *mut c_void,
+        8,
+    )?;
     let original_npc_load = patch_bytes(
         &(TESNPC::new_load as usize),
         (npc_vtable + 0x30) as *mut c_void,
         8,
     )?;
 
-    LateStatic::assign(&S, State {
-        npc_vtable,
-        npc_load: transmute(*(original_npc_load.as_ptr() as *const usize)),
-        task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
-    });
+    LateStatic::assign(
+        &S,
+        State {
+            npc_vtable,
+            npc_load: transmute(*(original_npc_load.as_ptr() as *const usize)),
+            task_queue: db::TASK_QUEUE.lock().unwrap().clone(),
+        },
+    );
 
     output_debug_string(format!("S: {:#x?}", S.deref()).as_str());
 
