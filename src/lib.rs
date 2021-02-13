@@ -18,7 +18,7 @@ use win_dbg_logger::output_debug_string;
 use winapi::ctypes::c_void;
 use winapi::um::libloaderapi::GetModuleHandleA;
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 type PluginHandle = u32;
 
@@ -82,7 +82,7 @@ pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
         let msg = info.to_string();
         output_debug_string(msg.as_str());
         if let Ok(mut w) = log::LOG.lock() {
-            w.write_all(msg.as_bytes()).ok();
+            w.write_all((msg + "\n").as_bytes()).ok();
         }
     }));
 
@@ -114,7 +114,7 @@ pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
     log::LOG
         .lock()
         .unwrap()
-        .write_all("SkyrimSearchSe is ready".as_bytes())
+        .write_all("SkyrimSearchSe is ready\n".as_bytes())
         .logging_ok();
 
     output_debug_string("SkyrimSearchSe is ready");

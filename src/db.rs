@@ -92,9 +92,6 @@ pub(crate) fn init_index(db: &rusqlite::Connection) -> rusqlite::Result<()> {
         CREATE INDEX IF NOT EXISTS quest_name ON quest (name);
 
         CREATE INDEX IF NOT EXISTS quest_stage_form_id ON quest_stage (form_id);
-        CREATE INDEX IF NOT EXISTS quest_stage_editor_id ON quest_stage (editor_id);
-        CREATE INDEX IF NOT EXISTS quest_stage_log ON quest_stage (log);
-        CREATE INDEX IF NOT EXISTS quest_stage_name ON quest_stage (name);
      "#,
     )
 }

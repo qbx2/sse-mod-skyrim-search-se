@@ -68,7 +68,7 @@ impl<T, E: Into<anyhow::Error>> Loggable<T> for Result<T, E> {
                     output_debug_string(format!("{:#}", err).as_str());
                     LOG.lock()
                         .map_err(|e| anyhow!(e.to_string()))?
-                        .write_all(format!("{:#}", err).as_bytes())?
+                        .write_all(format!("{:#}\n", err).as_bytes())?
                 };
                 if let Err(err) = result {
                     output_debug_string(format!("{:#}", err.context("Loggable::log")).as_str());

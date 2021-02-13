@@ -1,5 +1,6 @@
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::intrinsics::transmute;
+use std::io::Write;
 
 use anyhow::Context;
 use detour::static_detour;
@@ -7,15 +8,29 @@ use late_static::LateStatic;
 use winapi::_core::prelude::v1::Iterator;
 use winapi::ctypes::{c_char, c_void};
 
-use crate::app;
 use crate::log::Loggable;
+use crate::{app, log};
 
 static_detour! {
     static ProcessConsoleInput: fn(usize, i64, i64, i64);
 }
 
 fn new_process_console_input(param1: usize, param2: i64, param3: i64, param4: i64) {
-    let result = app::process_console_input(param1);
+    let input = unsafe { CStr::from_ptr(*((param1 + 0x38) as *const *const c_char)).to_str() };
+    let result = match input {
+        Ok(input) => {
+            {
+                let mut log = log::LOG.lock().unwrap();
+                log.write_all(input.as_bytes()).ok();
+                log.write_all("\n".as_bytes()).ok();
+            }
+            app::process_console_input(input)
+        }
+        Err(err) => {
+            print(err.to_string().as_str());
+            Ok(app::ProcessResult::Fallback)
+        }
+    };
     match result {
         Ok(app::ProcessResult::Processed) => {}
         Err(err) => print(format!("{:#}", err)),
@@ -38,6 +53,11 @@ static S: LateStatic<State> = LateStatic::new();
 
 pub(crate) fn print<T: Into<Vec<u8>>>(msg: T) {
     let msg = msg.into();
+    {
+        let mut log = log::LOG.lock().unwrap();
+        log.write_all(msg.as_slice()).ok();
+        log.write_all("\n".as_bytes()).ok();
+    }
     let msg = String::from_utf8_lossy(msg.as_ref());
     let msgs = msg.split("\n");
     // The print_to_console's internal buffer size is 1024.

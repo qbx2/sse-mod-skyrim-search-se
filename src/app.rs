@@ -1,4 +1,3 @@
-use std::ffi::CStr;
 use std::intrinsics::transmute;
 use std::option::NoneError;
 use std::sync::mpsc::Sender;
@@ -16,8 +15,6 @@ use crate::form::TESForm;
 use crate::log::Loggable;
 use crate::{console, db};
 use late_static::LateStatic;
-use win_dbg_logger::output_debug_string;
-use winapi::ctypes::c_char;
 
 pub(crate) enum ProcessResult {
     Processed,
@@ -30,6 +27,7 @@ pub const SKYRIM_SEARCH_COMMANDS: [&str; 4] = ["ss", "sss", "skyrimsearch", "sky
 pub fn get_clap<'a, 'b>() -> clap::App<'a, 'b> {
     clap::App::new("skyrim-search-se")
         .version("0.1")
+        .author("Author: qbx2 / GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se")
         .setting(AppSettings::DisableHelpSubcommand)
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -100,15 +98,7 @@ struct State {
 unsafe impl Sync for State {}
 static S: LateStatic<State> = LateStatic::new();
 
-pub(crate) fn process_console_input(param1: usize) -> anyhow::Result<ProcessResult> {
-    let input = match unsafe { CStr::from_ptr(*((param1 + 0x38) as *const *const c_char)).to_str() }
-    {
-        Ok(input) => input,
-        Err(err) => {
-            output_debug_string(err.to_string().as_str());
-            return Ok(ProcessResult::Fallback);
-        }
-    };
+pub(crate) fn process_console_input(input: &str) -> anyhow::Result<ProcessResult> {
     if input.len() == 0 {
         return Ok(ProcessResult::Fallback);
     }
