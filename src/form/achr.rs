@@ -44,8 +44,7 @@ impl TESCharacter {
         let result: anyhow::Result<()> = try {
             S.task_queue.send(Box::new(move |db| {
                 db.prepare_cached(
-                    "INSERT INTO actor (form_id, base_form_id) VALUES (?, ?)\
-                     ON CONFLICT(form_id) DO UPDATE SET base_form_id=excluded.base_form_id",
+                    "INSERT OR REPLACE INTO actor (form_id, base_form_id) VALUES (?, ?);",
                 ).context("chracter_new_load prepare")?
                     .execute(params![form_id, base_form.form_id]).context("character_new_load execute")?;
                 Ok(())

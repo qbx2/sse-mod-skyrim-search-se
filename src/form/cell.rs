@@ -53,8 +53,7 @@ impl TESObjectCELL {
         let result: anyhow::Result<()> = try {
             S.task_queue.send(Box::new(move |db| {
                 db.prepare_cached(
-                    "INSERT INTO cell (form_id, editor_id, name) VALUES (?, ?, ?)\
-                     ON CONFLICT(form_id) DO UPDATE SET editor_id=excluded.editor_id, name=excluded.name",
+                    "INSERT OR REPLACE INTO cell (form_id, editor_id, name) VALUES (?, ?, ?);",
                 ).context("cell_new_load prepare")?
                     .execute(params![form_id, editor_id, name]).context("cell_new_load execute")?;
                 Ok(())

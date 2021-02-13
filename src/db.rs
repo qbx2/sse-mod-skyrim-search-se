@@ -55,10 +55,44 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
             editor_id text collate nocase,
             name text collate nocase
         );
+
+        DROP TABLE IF EXISTS quest;
+        CREATE TABLE quest (
+            form_id integer primary key not null,
+            editor_id text collate nocase,
+            name text collate nocase
+        );
+
+        DROP TABLE IF EXISTS quest_stage;
+        CREATE TABLE quest_stage (
+            form_id text collate nocase,
+            stage integer,
+            log integer,
+            primary key (form_id, stage)
+        );
         "#,
     ).context("init_schema error")?;
 
     Ok(conn)
+}
+
+pub(crate) fn init_index(db: &rusqlite::Connection) -> rusqlite::Result<()> {
+    db.execute_batch(r#"
+        CREATE INDEX IF NOT EXISTS npc_editor_id ON npc (editor_id);
+        CREATE INDEX IF NOT EXISTS npc_name ON npc (name);
+
+        CREATE INDEX IF NOT EXISTS actor_base_form_id ON actor (base_form_id);
+
+        CREATE INDEX IF NOT EXISTS cell_editor_id ON cell (editor_id);
+        CREATE INDEX IF NOT EXISTS cell_name ON cell (name);
+
+        CREATE INDEX IF NOT EXISTS quest_editor_id ON quest (editor_id);
+        CREATE INDEX IF NOT EXISTS quest_name ON quest (name);
+
+        CREATE INDEX IF NOT EXISTS quest_stage_editor_id ON quest_stage (editor_id);
+        CREATE INDEX IF NOT EXISTS quest_stage_log ON quest_stage (log);
+        CREATE INDEX IF NOT EXISTS quest_stage_name ON quest_stage (name);
+     "#)
 }
 
 struct Worker(std::sync::mpsc::Receiver<Job>);
@@ -82,16 +116,4 @@ impl Worker {
     fn process_job(db: &rusqlite::Connection, msg: Job) -> anyhow::Result<()> {
         msg(db)
     }
-}
-
-pub(crate) fn init_index(db: &rusqlite::Connection) -> rusqlite::Result<()> {
-    db.execute_batch(r#"
-        CREATE INDEX IF NOT EXISTS npc_editor_id ON npc (editor_id);
-        CREATE INDEX IF NOT EXISTS npc_name ON npc (name);
-
-        CREATE INDEX IF NOT EXISTS actor_base_form_id ON actor (base_form_id);
-
-        CREATE INDEX IF NOT EXISTS cell_editor_id ON cell (editor_id);
-        CREATE INDEX IF NOT EXISTS cell_name ON cell (name);
-     "#)
 }
