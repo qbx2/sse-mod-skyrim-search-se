@@ -14,11 +14,12 @@ use crate::db::Job;
 use crate::form::TESForm;
 use std::ffi::CStr;
 
-struct TESQuest(TESForm);
+#[derive(Debug)]
+pub(crate) struct TESQuest(TESForm);
 
 #[repr(C)]
 #[derive(Debug)]
-struct LogEntry {
+pub(crate) struct LogEntry {
     unk00: u32, // 00
     unk04: u32, // 04
     unk08: u32, // 08
@@ -30,18 +31,18 @@ struct LogEntry {
 
 #[repr(C)]
 #[derive(Debug)]
-struct LogEntryNode {
+pub(crate) struct LogEntryNode {
     entry: *const LogEntry,
     next: *const LogEntryNode,
 }
 
 #[repr(C)]
 #[derive(Debug)]
-struct Index {
+pub(crate) struct Index {
     stage: u16, // 00
     flags: u16, // 02
     unk04: u32, // 04
-    head: LogEntryNode, // 08
+    pub(crate) head: LogEntryNode, // 08
 }
 
 #[repr(C)]
@@ -71,6 +72,59 @@ impl std::fmt::Debug for State {
     }
 }
 
+pub(crate) struct IndexNodeIterator(*const IndexNode);
+pub(crate) struct LogEntryNodeIterator(*const LogEntryNode);
+
+impl Iterator for LogEntryNodeIterator {
+    type Item = *const LogEntry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.is_null() {
+            return None;
+        }
+        let result = unsafe { &*self.0 };
+        self.0 = result.next;
+        if result.entry.is_null() {
+            return None;
+        }
+        return Some(result.entry);
+    }
+}
+
+impl IntoIterator for &LogEntryNode {
+    type Item = *const LogEntry;
+    type IntoIter = LogEntryNodeIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        LogEntryNodeIterator(self as *const LogEntryNode)
+    }
+}
+
+impl Iterator for IndexNodeIterator {
+    type Item = *const Index;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0.is_null() {
+            return None;
+        }
+        let result = unsafe { &*self.0 };
+        self.0 = result.next;
+        if result.index.is_null() {
+            return None;
+        }
+        return Some(result.index);
+    }
+}
+
+impl IntoIterator for &IndexNode {
+    type Item = *const Index;
+    type IntoIter = IndexNodeIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IndexNodeIterator(self as *const IndexNode)
+    }
+}
+
 impl TESQuest {
     fn get_edid(&self) -> Option<std::borrow::Cow<str>> {
         unsafe {
@@ -82,63 +136,51 @@ impl TESQuest {
         }
     }
 
-    fn traverse_log_entry_nodes(index: &Index) -> Vec<&LogEntry> {
+    fn get_head(&self) -> Option<&IndexNode> {
         unsafe {
-            let head = &index.head as *const LogEntryNode;
+            let head = (transmute::<_, usize>(self) + 0xe8) as *const IndexNode;
             if head.is_null() {
-                return vec![];
+                return None;
             }
-            let mut node = head;
-            let entry = (*node).entry;
-            if entry.is_null() {
-                return vec![];
-            }
-            let mut vec: Vec<&LogEntry> = vec![&*entry];
-            loop {
-                node = (*node).next;
-                if node.is_null() {
-                    break;
-                }
-                let entry = (*node).entry;
-                if !entry.is_null() {
-                    vec.push(&*entry);
-                }
-            }
-            vec
+            Some(&*head)
         }
     }
 
     fn traverse(&self) -> Vec<(&Index, Vec<&LogEntry>)> {
-        unsafe {
-            let head = (transmute::<_, usize>(self) + 0xe8) as *const IndexNode;
-            if head.is_null() {
-                return vec![];
-            }
-            let mut node = head;
-            let index = (*node).index;
-            if index.is_null() {
-                return vec![];
-            }
-            let entry_nodes = Self::traverse_log_entry_nodes(&*index);
-            let mut vec: Vec<(&Index, Vec<&LogEntry>)> = vec![(&*index, entry_nodes)];
-            loop {
-                node = (*node).next;
-                if node.is_null() {
-                    break;
+        let head = match self.get_head() {
+            Some(head) => head,
+            None => return vec![],
+        };
+        let mut vec: Vec<(&Index, Vec<&LogEntry>)> = Vec::with_capacity(1);
+        for index in head.into_iter() {
+            let mut entry_nodes = Vec::new();
+
+            unsafe {
+                for log_entry in (&*index).head.into_iter() {
+                    entry_nodes.push(&*log_entry);
                 }
-                let index = (*node).index;
-                if !index.is_null() {
-                    let entry_nodes = Self::traverse_log_entry_nodes(&*index);
-                    vec.push((&*index, entry_nodes));
-                }
+
+                vec.push((&*index, entry_nodes));
             }
-            vec
         }
+        vec
+    }
+
+    pub(crate) fn get_log(&self, stage: u16) -> Option<&Index> {
+        unsafe {
+            let head = self.get_head()?;
+            for index in head.into_iter() {
+                let index = &*index;
+                if index.stage == stage {
+                    return Some(index);
+                }
+            }
+        };
+        return None;
     }
 
     // NOTE: This function only works when a save has been loaded.
-    #[allow(dead_code)]
-    fn get_log_description(&self, log: &LogEntry) -> std::borrow::Cow<str> {
+    pub(crate) fn get_log_description(&self, log: &LogEntry) -> std::borrow::Cow<str> {
         let s = (S.quest_get_description)(log, self, 0, 0);
         if s.is_null() {
             return std::borrow::Cow::from("");
@@ -167,6 +209,9 @@ impl TESQuest {
                 for log in log_entries.iter() {
                     let stage = index.stage;
                     let log_string_offset = log.string_offset;
+                    if log_string_offset == 4294967295 {
+                        continue;
+                    }
                     S.task_queue.send(Box::new(move |db| {
                         db.prepare_cached(
                             "INSERT OR REPLACE INTO quest_stage (form_id, stage, log) VALUES (?, ?, ?);",

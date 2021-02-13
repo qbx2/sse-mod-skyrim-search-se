@@ -8,9 +8,10 @@ mod npc;
 mod achr;
 mod refr;
 mod cell;
-mod qust;
+pub(crate) mod qust;
 
 #[repr(C)]
+#[derive(Debug)]
 pub(crate) struct TESForm {
     unknown_00: u64,
     unknown_08: u64,
@@ -25,6 +26,7 @@ pub(crate) struct TESForm {
 
 struct State {
     get_name: fn(&TESForm) -> *const c_char,
+    look_up_by_id: fn(u32) -> *const TESForm,
 }
 unsafe impl Sync for State {}
 static S: LateStatic<State> = LateStatic::new();
@@ -39,13 +41,19 @@ impl TESForm {
             Some(CStr::from_ptr(result).to_string_lossy())
         }
     }
+
+    pub(crate) fn look_up_by_id(id: u32) -> *const TESForm {
+        (S.look_up_by_id)(id)
+    }
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     let get_name = transmute(image_base + 0x196e10);
+    let look_up_by_id = transmute(image_base + 0x194230);
 
     LateStatic::assign(&S, State {
         get_name,
+        look_up_by_id,
     });
 
     npc::init(image_base).context("npc::init")?;

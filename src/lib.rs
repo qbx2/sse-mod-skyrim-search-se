@@ -6,6 +6,7 @@ mod console;
 mod form;
 mod patch;
 mod db;
+mod app;
 
 use winapi::ctypes::c_void;
 use win_dbg_logger::output_debug_string;
@@ -91,6 +92,7 @@ pub extern fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
 
         console::init(image_base).context("console::init")?;
         form::init(image_base).context("form::init")?;
+        app::init(image_base).context("form::init")?;
     }};
 
     lazy_static::initialize(&db::DB);

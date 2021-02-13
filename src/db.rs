@@ -38,37 +38,37 @@ fn init_db() -> anyhow::Result<rusqlite::Connection> {
 
         DROP TABLE IF EXISTS npc;
         CREATE TABLE npc (
-            form_id integer primary key not null,
-            editor_id text collate nocase,
-            name text collate nocase
+            form_id INTEGER PRIMARY KEY NOT NULL,
+            editor_id TEXT COLLATE NOCASE,
+            name TEXT COLLATE NOCASE
         );
 
         DROP TABLE IF EXISTS actor;
         CREATE TABLE actor (
-            form_id integer primary key not null,
-            base_form_id integer
+            form_id INTEGER PRIMARY KEY NOT NULL,
+            base_form_id INTEGER
         );
 
         DROP TABLE IF EXISTS cell;
         CREATE TABLE cell (
-            form_id integer primary key not null,
-            editor_id text collate nocase,
-            name text collate nocase
+            form_id INTEGER PRIMARY KEY NOT NULL,
+            editor_id TEXT COLLATE NOCASE,
+            name TEXT COLLATE NOCASE
         );
 
         DROP TABLE IF EXISTS quest;
         CREATE TABLE quest (
-            form_id integer primary key not null,
-            editor_id text collate nocase,
-            name text collate nocase
+            form_id INTEGER PRIMARY KEY NOT NULL,
+            editor_id TEXT COLLATE NOCASE,
+            name TEXT COLLATE NOCASE
         );
 
         DROP TABLE IF EXISTS quest_stage;
         CREATE TABLE quest_stage (
-            form_id text collate nocase,
-            stage integer,
-            log integer,
-            primary key (form_id, stage)
+            form_id TEXT COLLATE NOCASE,
+            stage INTEGER,
+            log INTEGER,
+            PRIMARY KEY (form_id, stage)
         );
         "#,
     ).context("init_schema error")?;
@@ -89,6 +89,7 @@ pub(crate) fn init_index(db: &rusqlite::Connection) -> rusqlite::Result<()> {
         CREATE INDEX IF NOT EXISTS quest_editor_id ON quest (editor_id);
         CREATE INDEX IF NOT EXISTS quest_name ON quest (name);
 
+        CREATE INDEX IF NOT EXISTS quest_stage_form_id ON quest_stage (form_id);
         CREATE INDEX IF NOT EXISTS quest_stage_editor_id ON quest_stage (editor_id);
         CREATE INDEX IF NOT EXISTS quest_stage_log ON quest_stage (log);
         CREATE INDEX IF NOT EXISTS quest_stage_name ON quest_stage (name);
