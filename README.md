@@ -1,4 +1,4 @@
-# SkyrimSearch SE
+# Skyrim Search SE
 
 It is new version of [Skyrim Search Plugin](https://www.nexusmods.com/skyrim/mods/50435/) for Skyrim Special Edition.
 
