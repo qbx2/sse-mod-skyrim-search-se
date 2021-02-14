@@ -96,7 +96,7 @@ pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
 
             console::init(image_base).context("console::init")?;
             form::init(image_base).context("form::init")?;
-            app::init(image_base).context("form::init")?;
+            app::init(image_base).context("app::init")?;
         }
     };
 
