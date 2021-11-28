@@ -87,12 +87,12 @@ pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     LateStatic::assign(
         &S,
         State {
-            console_context: transmute(image_base + 0x2f000f0),
-            print_to_console: transmute(image_base + 0x85c290),
+            console_context: transmute(image_base + 0x2F9A800),//score 1 0x2f000f0 -> 142F9A800
+            print_to_console: transmute(image_base + 0x889650),//score 0.955 0x85c290 -> 140889650
         },
     );
 
-    let target_addr = transmute(image_base + 0x2e75f0);
+    let target_addr = transmute(image_base + 0x2FBA00);//score 0.615  0x2e75f0 -> 1402FBA00
     ProcessConsoleInput
         .initialize(target_addr, new_process_console_input)
         .context("initialize")?;

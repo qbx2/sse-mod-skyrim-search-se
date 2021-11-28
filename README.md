@@ -1,6 +1,6 @@
 # Skyrim Search SE
 
-It is new version of [Skyrim Search Plugin](https://www.nexusmods.com/skyrim/mods/50435/) for Skyrim Special Edition.
+This is an updated version of [Skyrim Search SE](https://www.nexusmods.com/skyrimspecialedition/mods/45689) by qbx2 for Skyrim Anniversary Edition.
 
 This plugin adds some console commands that allows you to search for NPCs, cells, and quests by FormID/EditorID/Name.
 Moreover, you can find refIds of NPCs, codes for `coc` command, and quest stage number for `completequest` command.
@@ -18,8 +18,8 @@ Also, You can view your inputs and outputs in log file in `\My Games\Skyrim Spec
 * help command: `ss --help`
 ```
 ss --help
-skyrim-search-se 0.1
-Author: qbx2 / GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se
+skyrim-search-se 0.2
+Author: qbx2/lukasaldersley | GitHub: https://github.com/lukasaldersley/sse-mod-skyrim-search-se
  
 USAGE:
     ss [FLAGS] <SUBCOMMAND>
@@ -143,16 +143,22 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 ```
 ## Requirements
 - [SKSE64](https://skse.silverlock.org/)
-- SkyrimSE *1.5.97*
+- SkyrimSE *1.6.318*
 
 ## Build Requirements
 - [Rust](https://www.rust-lang.org/) nightly compiler
 - `rustup target add x86_64-pc-windows-gnu`
+- `rustup install nightly-2020-02-14`
+- The Reason for the heavily outdated Rust version is that the code and libraries contain stuff that's been removed and won't compile. I have never worked with Rust before so I have no Idea how to fix/update the code.
+- [MinGW64: mingw-w64-install.exe](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe) needs to be installed with the x86_64 option NOT i686, and you need add its bin folder to the PATH system variable
 
 ## Build
 ```
-cargo build
+cargo +nightly-2020-02-14 build
 ```
+
+### Credits 
+[kmdreko](https://stackoverflow.com/users/2189130/kmdreko) on Stack Overflow for helping with some Rust problems
 
 ### Disclaimer
 This plugin was not created by, and is not affiliated with, the website SkyrimSearch.com.

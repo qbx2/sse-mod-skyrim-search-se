@@ -22,6 +22,42 @@ const DEBUG: bool = false;
 
 type PluginHandle = u32;
 
+//START AE CODE
+enum KVersionenum {
+    KVersion=1,
+}
+
+#[repr(C)]
+pub struct SKSEPluginVersionData {
+    dataVersion: u32,
+
+    pluginVersion: u32,
+    name: [u8;256],
+
+    author: [u8;256],
+    supportEmail: [u8;256],
+
+    versionIndependence: u32,
+    compatibleVersions: [u32;16],
+
+    seVersionRequired: u32,
+}
+
+const RUNTIME_VERSION_1_6_318: u32 = 0x010613E0;
+
+#[no_mangle]
+pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
+    dataVersion: KVersionenum::KVersion as u32,
+    pluginVersion: 2,
+    name: *b"Skyrim Search\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
+    author: *b"qbx2 / lukasaldersley\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
+    supportEmail: *b"open a GitHub issue on my or qbx2's GitHub instead\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
+    versionIndependence: 0,
+    compatibleVersions: [RUNTIME_VERSION_1_6_318,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    seVersionRequired: 0,
+};
+//END AE CODE
+
 #[repr(C)]
 pub struct SKSEInterface {
     skse_version: u32,
@@ -59,11 +95,11 @@ pub struct PluginInfo {
 
 #[no_mangle]
 pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
+
     let skse = unsafe { &*skse };
     let mut info = unsafe { &mut *info };
 
-    if skse.runtime_version != 0x01050610 {
-        // 1.5.97
+    if skse.runtime_version != RUNTIME_VERSION_1_6_318 {
         output_debug_string(
             format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str(),
         );

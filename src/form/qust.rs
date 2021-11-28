@@ -211,7 +211,7 @@ impl TESQuest {
                 for log in log_entries.iter() {
                     let stage = index.stage;
                     let log_string_offset = log.string_offset;
-                    if log_string_offset == 4294967295 {
+                    if log_string_offset == 4294967295 {//that's 2^32 => prevent overflow, probably
                         continue;
                     }
                     S.task_queue.send(Box::new(move |db| {
@@ -232,8 +232,8 @@ impl TESQuest {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let quest_vtable = transmute(image_base + 0x15a1c98);
-    let quest_get_description = transmute(image_base + 0x382720);
+    let quest_vtable = transmute(image_base + 0x1699720);//findable in address library comparison thingy with score 1 0x15a1c98 -> 141699720
+    let quest_get_description = transmute(image_base + 0x399000);//in address library comparison thing, this is a function with score 0.988 0x382720 -> 140399000
 
     let original_quest_load = patch_bytes(
         &(TESQuest::new_load as usize),

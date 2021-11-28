@@ -68,7 +68,7 @@ impl TESObjectCELL {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let cell_vtable = transmute(image_base + 0x1566060);
+    let cell_vtable = transmute(image_base + 0x165DAB0);//findable with score 1 vtable 0x1566060 -> 14165DAB0
 
     let original_cell_load = patch_bytes(
         &(TESObjectCELL::new_load as usize),
