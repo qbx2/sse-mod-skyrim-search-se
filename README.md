@@ -18,8 +18,8 @@ Also, You can view your inputs and outputs in log file in `\My Games\Skyrim Spec
 * help command: `ss --help`
 ```
 ss --help
-skyrim-search-se 0.1
-Author: qbx2 / GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se
+skyrim-search-se 0.3
+Author: qbx2/lukasaldersley | GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se
  
 USAGE:
     ss [FLAGS] <SUBCOMMAND>
@@ -142,17 +142,21 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 
 ```
 ## Requirements
-- [SKSE64](https://skse.silverlock.org/)
-- SkyrimSE *1.5.97*
+- SkyrimSE *1.6.323*
+- [SKSE64](https://skse.silverlock.org/), matching game version
 
 ## Build Requirements
-- [Rust](https://www.rust-lang.org/) compiler
+- [MinGW64: mingw-w64-install.exe](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe) needs to be installed with the x86_64 option NOT i686, and you need add its bin folder to the PATH system variable
+- [Rust 1.51+](https://www.rust-lang.org/) compiler
 - `rustup target add x86_64-pc-windows-gnu`
 
 ## Build
 ```
 cargo build
 ```
+
+### Credits 
+[kmdreko](https://stackoverflow.com/users/2189130/kmdreko) on Stack Overflow for helping with some Rust problems
 
 ### Disclaimer
 This plugin was not created by, and is not affiliated with, the website SkyrimSearch.com.
