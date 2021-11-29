@@ -26,7 +26,7 @@ pub const SKYRIM_SEARCH_COMMANDS: [&str; 4] = ["ss", "sss", "skyrimsearch", "sky
 
 pub fn get_clap<'a, 'b>() -> clap::App<'a, 'b> {
     clap::App::new("skyrim-search-se")
-        .version("0.2")
+        .version("0.3")
         .author("Author: qbx2/lukasaldersley | GitHub: https://github.com/lukasaldersley/sse-mod-skyrim-search-se")
         .setting(AppSettings::DisableHelpSubcommand)
         .setting(AppSettings::VersionlessSubcommands)

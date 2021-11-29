@@ -48,8 +48,8 @@ impl TESForm {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let get_name = transmute(image_base + 0x1A1C90);//finable but score 0.918 and as a offset in that lookup table specified func 0x196e10 -> 1401A1C90
-    let look_up_by_id = transmute(image_base + 0x19F110);//findable score 1 func 0x194230 -> 14019F110
+    let get_name = transmute(image_base + 0x1a1c00);//1.5.97: 0x196e10 -(score 0.918)-> 1.6.318: 0x1A1C90 -> addressLib ID: 14720 -> 1.6.323: 0x1a1c00
+    let look_up_by_id = transmute(image_base + 0x19f080);//1.5.97: 0x194230 -(score 1.0)-> 1.6.318: 0x19F110 -> addressLib ID: 14617 -> 1.6.323: 0x19f080
 
     LateStatic::assign(
         &S,

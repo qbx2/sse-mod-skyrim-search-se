@@ -84,7 +84,7 @@ impl TESNPC {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let npc_vtable = transmute(image_base + 0x1697A30);//in matching with score 1 0x159fcd0 -> 141697A30
+    let npc_vtable = transmute(image_base + 0x1697A30);//1.5.97: 0x159fcd0 -(score 1.0)-> 1.6.318: 0x1697A30 -> addressLib ID: 195816 -> 1.6.323: 0x1697a30
 
     output_debug_string(format!("npc set_edid: {:#x}", npc_vtable + 0x198).as_str());
 
