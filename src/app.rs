@@ -1,20 +1,16 @@
-use std::intrinsics::transmute;
-use std::option::NoneError;
-use std::sync::mpsc::Sender;
-use std::sync::{Arc, Condvar, Mutex};
-
-use anyhow::{anyhow, Context};
-use clap::{AppSettings, Arg, SubCommand};
-use rusqlite::params;
-use rusqlite::types::ValueRef;
-use rusqlite::{Statement, NO_PARAMS};
-
 use crate::db::Job;
 use crate::form::qust::TESQuest;
 use crate::form::TESForm;
 use crate::log::Loggable;
 use crate::{console, db};
+use anyhow::{anyhow, Context};
+use clap::{AppSettings, Arg, SubCommand};
 use late_static::LateStatic;
+use rusqlite::params;
+use rusqlite::types::ValueRef;
+use rusqlite::{Statement, NO_PARAMS};
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Condvar, Mutex};
 
 pub(crate) enum ProcessResult {
     Processed,
@@ -99,7 +95,7 @@ unsafe impl Sync for State {}
 static S: LateStatic<State> = LateStatic::new();
 
 pub(crate) fn process_console_input(input: &str) -> anyhow::Result<ProcessResult> {
-    if input.len() == 0 {
+    if input.is_empty() {
         return Ok(ProcessResult::Fallback);
     }
     let input = match shlex::split(input) {
@@ -374,20 +370,21 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
             let repr = repr_column(row.column_name(i).ok(), column);
             cells.push(prettytable::Cell::new(repr.as_str()));
         }
-        let description: anyhow::Result<std::borrow::Cow<str>> = try {
-            let form_id = row.get_raw("form_id").as_i64()?;
+        let description: anyhow::Result<std::borrow::Cow<str>> = (|| {
+            let form_id = row.get_raw("form_id").as_i64()? as u32;
             let stage = row.get_raw("stage").as_i64()?;
-            let quest: &TESQuest = unsafe { transmute(TESForm::look_up_by_id(form_id as u32)) };
+            let quest: &TESQuest = unsafe { &*(TESForm::look_up_by_id(form_id) as *const TESQuest) };
             let index = quest
                 .get_log(stage as u16)
                 .ok_or_else(|| anyhow!("invalid data"))?;
-            let log_entry = index.head.into_iter().next();
-            if let Some(log_entry) = log_entry {
+            let log_entry = if let Some(log_entry) = index.head.into_iter().next() {
                 quest.get_log_description(unsafe { &*log_entry })
             } else {
                 std::borrow::Cow::from("")
-            }
-        };
+            };
+            Ok(log_entry)
+        })();
+
         cells.push(prettytable::Cell::new(
             description
                 .unwrap_or_else(|e| e.to_string().into())
@@ -400,7 +397,7 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
         console::print("Change your query or try loading a save?");
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn print_rows<F>(mut rows: rusqlite::Rows, f: F) -> anyhow::Result<usize>
@@ -414,7 +411,7 @@ where
     }
 
     let mut ptable = prettytable::Table::new();
-    set_titles(&mut rows, &mut ptable).ok();
+    set_titles(&mut rows, &mut ptable);
     loop {
         let row = match rows.next().map_err(anyhow::Error::new) {
             Ok(Some(row)) => row,
@@ -458,11 +455,11 @@ fn repr_column(name: Option<&str>, column: ValueRef) -> String {
     }
 }
 
-fn set_titles(rows: &mut rusqlite::Rows, table: &mut prettytable::Table) -> Result<(), NoneError> {
+fn set_titles(rows: &mut rusqlite::Rows, table: &mut prettytable::Table) -> Option<()> {
     let names = rows.column_names()?;
     table.set_format(*prettytable::format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
     table.set_titles(names.into_iter().map(prettytable::Cell::new).collect());
-    Ok(())
+    Some(())
 }
 
 pub(crate) unsafe fn init(_image_base: usize) -> anyhow::Result<()> {

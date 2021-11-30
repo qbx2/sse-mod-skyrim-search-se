@@ -51,19 +51,20 @@ impl TESObjectCELL {
         let editor_id = self.get_edid().map(|name| name.to_string());
         let name = self.0.get_name().map(|name| name.to_string());
         let result: anyhow::Result<()> =
-            try {
+            (|| {
                 S.task_queue
                     .send(Box::new(move |db| {
                         db.prepare_cached(
-                    "INSERT OR REPLACE INTO cell (form_id, editor_id, name) VALUES (?, ?, ?);",
-                ).context("cell_new_load prepare")?
-                    .execute(params![form_id, editor_id, name]).context("cell_new_load execute")?;
+                "INSERT OR REPLACE INTO cell (form_id, editor_id, name) VALUES (?, ?, ?);",
+            ).context("cell_new_load prepare")?
+                .execute(params![form_id, editor_id, name]).context("cell_new_load execute")?;
                         Ok(())
                     }))
                     .map_err(|e| anyhow!(e.to_string()))?;
-            };
+                Ok(())
+            })();
         result.logging_ok();
-        return ret;
+        ret
     }
 }
 

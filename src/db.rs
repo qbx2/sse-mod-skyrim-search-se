@@ -9,8 +9,9 @@ lazy_static! {
         match init_db().context("init_db error") {
             Ok(db) => Mutex::new(db),
             Err(err) => {
-                output_debug_string(format!("{:#}", err).as_str());
-                panic!(format!("{:#}", err));
+                let s = format!("{:#}", err);
+                output_debug_string(s.as_str());
+                panic!("{}", s);
             }
         }
     };

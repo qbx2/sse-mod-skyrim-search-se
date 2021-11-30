@@ -1,15 +1,13 @@
-use std::ffi::{CStr, CString};
-use std::intrinsics::transmute;
-use std::io::Write;
-
+use crate::log::Loggable;
+use crate::{app, log};
 use anyhow::Context;
 use detour::static_detour;
 use late_static::LateStatic;
+use std::ffi::{CStr, CString};
+use std::intrinsics::transmute;
+use std::io::Write;
 use winapi::_core::prelude::v1::Iterator;
 use winapi::ctypes::{c_char, c_void};
-
-use crate::log::Loggable;
-use crate::{app, log};
 
 static_detour! {
     static ProcessConsoleInput: fn(usize, i64, i64, i64);
@@ -59,28 +57,26 @@ pub(crate) fn print<T: Into<Vec<u8>>>(msg: T) {
         log.write_all("\n".as_bytes()).ok();
     }
     let msg = String::from_utf8_lossy(msg.as_ref());
-    let msgs = msg.split("\n");
+    let msgs = msg.split('\n');
     // The print_to_console's internal buffer size is 1024.
     // ensure each lines not to overflow
     let chunks = msgs.flat_map(|msg| msg.as_bytes().chunks(1024));
     let chunks: Vec<Result<CString, _>> = chunks.map(CString::new).collect();
 
-    let result: anyhow::Result<()> = try {
-        unsafe {
-            let console_context = S.console_context;
-            if *console_context != std::ptr::null() {
-                for msg in chunks {
+    unsafe {
+        let console_context = S.console_context;
+        if !console_context.is_null() {
+            for chunk in chunks {
+                if let Some(msg) = chunk.logging_ok() {
                     (S.print_to_console)(
                         *console_context,
                         "%s\0".as_ptr() as *const c_char,
-                        msg?.as_c_str().as_ptr(),
+                        msg.as_c_str().as_ptr(),
                     );
                 }
             }
         }
-    };
-
-    result.logging_ok();
+    }
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {

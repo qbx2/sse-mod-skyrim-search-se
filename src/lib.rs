@@ -1,6 +1,3 @@
-#![feature(try_blocks)]
-#![feature(try_trait)]
-
 mod app;
 mod console;
 mod db;
@@ -57,6 +54,7 @@ pub struct PluginInfo {
     version: u32,
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
     let skse = unsafe { &*skse };
@@ -73,9 +71,10 @@ pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut Plugin
     info.info_version = InfoVersion::KInfoVersion as u32;
     info.name = "skyrim-search-se\0".as_ptr() as *const c_char;
     info.version = 1;
-    return true;
+    true
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
     std::panic::set_hook(Box::new(|info| {
@@ -90,7 +89,7 @@ pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
     lazy_static::initialize(&log::LOG);
     output_debug_string(format!("ssse skse load: {:#?}", skse).as_str());
 
-    let result: anyhow::Result<()> = try {
+    let result: anyhow::Result<()> = (|| {
         unsafe {
             let image_base = GetModuleHandleA(ptr::null()) as usize;
 
@@ -98,7 +97,9 @@ pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
             form::init(image_base).context("form::init")?;
             app::init(image_base).context("app::init")?;
         }
-    };
+
+        Ok(())
+    })();
 
     lazy_static::initialize(&db::DB);
 
@@ -119,5 +120,5 @@ pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
 
     output_debug_string("SkyrimSearchSe is ready");
 
-    return true;
+    true
 }

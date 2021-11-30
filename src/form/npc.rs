@@ -14,6 +14,7 @@ use std::sync::mpsc::Sender;
 use win_dbg_logger::output_debug_string;
 use winapi::ctypes::{c_char, c_void};
 
+#[allow(clippy::upper_case_acronyms)]
 struct TESNPC(TESForm);
 
 struct State {
@@ -38,7 +39,7 @@ impl TESNPC {
         if edid.is_null() {
             return false;
         }
-        let result: anyhow::Result<()> = try {
+        let result: anyhow::Result<()> = (|| {
             let form_id = self.0.form_id;
             let edid = unsafe { CStr::from_ptr(edid).to_str()? }.to_string();
 
@@ -54,7 +55,9 @@ impl TESNPC {
                     Ok(())
                 }))
                 .map_err(|e| anyhow!(e.to_string()))?;
-        };
+
+            Ok(())
+        })();
         result.logging_ok().is_some()
     }
 
@@ -62,7 +65,7 @@ impl TESNPC {
         let result = (S.npc_load)(self, arg);
         let form_id = self.0.form_id;
         if let Some(name) = self.0.get_name() {
-            let result: anyhow::Result<()> = try {
+            let result: anyhow::Result<()> = (|| {
                 let name = name.to_string();
                 S.task_queue
                     .send(Box::new(move |db| {
@@ -76,10 +79,12 @@ impl TESNPC {
                         Ok(())
                     }))
                     .map_err(|e| anyhow!(e.to_string()))?;
-            };
+
+                Ok(())
+            })();
             result.logging_ok();
         }
-        return result;
+        result
     }
 }
 

@@ -22,8 +22,9 @@ lazy_static! {
         match open_log_file().context("open_log_file error") {
             Ok(log) => Mutex::new(log),
             Err(err) => {
-                output_debug_string(format!("{:#}", err).as_str());
-                panic!(format!("{:#}", err));
+                let s = format!("{:#}", err);
+                output_debug_string(s.as_str());
+                panic!("{}", s);
             }
         }
     };
@@ -61,15 +62,16 @@ pub(crate) trait Loggable<T> {
 impl<T, E: Into<anyhow::Error>> Loggable<T> for Result<T, E> {
     fn logging_ok(self) -> Option<T> {
         match self {
-            Ok(v) => return Some(v),
+            Ok(v) => Some(v),
             Err(err) => {
-                let result: anyhow::Result<()> = try {
+                let result: anyhow::Result<()> = (|| {
                     let err = err.into();
                     output_debug_string(format!("{:#}", err).as_str());
                     LOG.lock()
                         .map_err(|e| anyhow!(e.to_string()))?
-                        .write_all(format!("{:#}\n", err).as_bytes())?
-                };
+                        .write_all(format!("{:#}\n", err).as_bytes())?;
+                    Ok(())
+                })();
                 if let Err(err) = result {
                     output_debug_string(format!("{:#}", err.context("Loggable::log")).as_str());
                 }
