@@ -1,6 +1,6 @@
 # Skyrim Search SE
 
-This is an updated version of [Skyrim Search SE](https://www.nexusmods.com/skyrimspecialedition/mods/45689) by qbx2 for Skyrim Anniversary Edition.
+This is new version of [Skyrim Search Plugin](https://www.nexusmods.com/skyrim/mods/50435/) by qbx2 for Skyrim SE/AE.
 
 This plugin adds some console commands that allows you to search for NPCs, cells, and quests by FormID/EditorID/Name.
 Moreover, you can find refIds of NPCs, codes for `coc` command, and quest stage number for `completequest` command.
@@ -19,7 +19,7 @@ Also, You can view your inputs and outputs in log file in `\My Games\Skyrim Spec
 ```
 ss --help
 skyrim-search-se 0.3
-Author: qbx2/lukasaldersley | GitHub: https://github.com/lukasaldersley/sse-mod-skyrim-search-se
+Author: qbx2/lukasaldersley | GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se
  
 USAGE:
     ss [FLAGS] <SUBCOMMAND>
