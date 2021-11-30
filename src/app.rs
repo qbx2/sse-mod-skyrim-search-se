@@ -373,7 +373,8 @@ pub fn process_quest_log_command(matches: &clap::ArgMatches) -> anyhow::Result<(
         let description: anyhow::Result<std::borrow::Cow<str>> = (|| {
             let form_id = row.get_raw("form_id").as_i64()? as u32;
             let stage = row.get_raw("stage").as_i64()?;
-            let quest: &TESQuest = unsafe { &*(TESForm::look_up_by_id(form_id) as *const TESQuest) };
+            let quest: &TESQuest =
+                unsafe { &*(TESForm::look_up_by_id(form_id) as *const TESQuest) };
             let index = quest
                 .get_log(stage as u16)
                 .ok_or_else(|| anyhow!("invalid data"))?;
