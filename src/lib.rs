@@ -60,8 +60,8 @@ pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut Plugin
     let skse = unsafe { &*skse };
     let mut info = unsafe { &mut *info };
 
-    if skse.runtime_version != 0x01050610 {
-        // 1.5.97
+    if skse.runtime_version != 0x01061430 {
+        // 1.6.323
         output_debug_string(
             format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str(),
         );
