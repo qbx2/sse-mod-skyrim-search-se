@@ -54,14 +54,58 @@ pub struct PluginInfo {
     version: u32,
 }
 
+enum DataVersion {
+    KVersion = 1,
+}
+
+#[allow(non_snake_case)]
+#[repr(C)]
+pub struct SKSEPluginVersionData {
+    dataVersion: u32,
+
+    pluginVersion: u32,
+    name: [u8; 256],
+
+    author: [u8; 256],
+    supportEmail: [u8; 256],
+
+    versionIndependence: u32,
+    compatibleVersions: [u32; 16],
+
+    seVersionRequired: u32,
+}
+
+const RUNTIME_VERSION_1_6_323: u32 = 0x01061430;
+
+const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
+    let mut m = [0; M];
+    let mut i = 0;
+    while i < N {
+        m[i] = arr[i];
+        i += 1;
+    }
+    m
+}
+
+#[no_mangle]
+pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
+    dataVersion: DataVersion::KVersion as u32,
+    pluginVersion: 1,
+    name: zero_pad_u8(b"Skyrim Search SE\0"),
+    author: zero_pad_u8(b"qbx2, lukasaldersley\0"),
+    supportEmail: zero_pad_u8(b"open a GitHub issue on qbx2's GitHub\0"),
+    versionIndependence: 0,
+    compatibleVersions: [RUNTIME_VERSION_1_6_323, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    seVersionRequired: 0,
+};
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
     let skse = unsafe { &*skse };
     let mut info = unsafe { &mut *info };
 
-    if skse.runtime_version != 0x01061430 {
-        // 1.6.323
+    if skse.runtime_version != RUNTIME_VERSION_1_6_323 {
         output_debug_string(
             format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str(),
         );
