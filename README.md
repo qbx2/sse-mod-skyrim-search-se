@@ -1,6 +1,6 @@
 # Skyrim Search SE
 
-It is new version of [Skyrim Search Plugin](https://www.nexusmods.com/skyrim/mods/50435/) for Skyrim Special Edition.
+This is new version of [Skyrim Search Plugin](https://www.nexusmods.com/skyrim/mods/50435/) for Skyrim Special Edition.
 
 This plugin adds some console commands that allows you to search for NPCs, cells, and quests by FormID/EditorID/Name.
 Moreover, you can find refIds of NPCs, codes for `coc` command, and quest stage number for `completequest` command.
@@ -146,7 +146,7 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 - SkyrimSE *1.5.97*
 
 ## Build Requirements
-- [Rust](https://www.rust-lang.org/) nightly compiler
+- [Rust](https://www.rust-lang.org/) compiler
 - `rustup target add x86_64-pc-windows-gnu`
 
 ## Build

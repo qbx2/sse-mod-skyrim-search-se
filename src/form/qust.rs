@@ -87,7 +87,7 @@ impl Iterator for LogEntryNodeIterator {
         if result.entry.is_null() {
             return None;
         }
-        return Some(result.entry);
+        Some(result.entry)
     }
 }
 
@@ -112,7 +112,7 @@ impl Iterator for IndexNodeIterator {
         if result.index.is_null() {
             return None;
         }
-        return Some(result.index);
+        Some(result.index)
     }
 }
 
@@ -156,7 +156,7 @@ impl TESQuest {
             let mut entry_nodes = Vec::new();
 
             unsafe {
-                for log_entry in (&*index).head.into_iter() {
+                for log_entry in (*index).head.into_iter() {
                     entry_nodes.push(&*log_entry);
                 }
 
@@ -176,7 +176,7 @@ impl TESQuest {
                 }
             }
         };
-        return None;
+        None
     }
 
     // NOTE: This function only works when a save has been loaded.
@@ -193,7 +193,7 @@ impl TESQuest {
         let form_id = self.0.form_id;
         let editor_id = self.get_edid().map(|name| name.to_string());
         let name = self.0.get_name().map(|name| name.to_string());
-        let result: anyhow::Result<()> = try {
+        let result: anyhow::Result<()> = (|| {
             S.task_queue
                 .send(Box::new(move |db| {
                     db.prepare_cached(
@@ -225,9 +225,11 @@ impl TESQuest {
                     })).map_err(|e| anyhow!(e.to_string()))?;
                 }
             }
-        };
+
+            Ok(())
+        })();
         result.logging_ok();
-        return ret;
+        ret
     }
 }
 

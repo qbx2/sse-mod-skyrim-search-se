@@ -41,7 +41,7 @@ impl TESCharacter {
             return ret;
         };
         let form_id = self.0.form.form_id;
-        let result: anyhow::Result<()> = try {
+        let result: anyhow::Result<()> = (|| {
             S.task_queue
                 .send(Box::new(move |db| {
                     db.prepare_cached(
@@ -53,9 +53,10 @@ impl TESCharacter {
                     Ok(())
                 }))
                 .map_err(|e| anyhow!(e.to_string()))?;
-        };
+            Ok(())
+        })();
         result.logging_ok();
-        return ret;
+        ret
     }
 }
 
