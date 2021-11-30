@@ -146,7 +146,7 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 - SkyrimSE *1.5.97*
 
 ## Build Requirements
-- [Rust](https://www.rust-lang.org/) nightly compiler
+- [Rust](https://www.rust-lang.org/) compiler
 - `rustup target add x86_64-pc-windows-gnu`
 
 ## Build
