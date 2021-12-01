@@ -61,7 +61,7 @@ impl TESCharacter {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let character_vtable = transmute(image_base + 0x165da40);
+    let character_vtable = transmute(image_base + 0x1753670);
 
     let original_character_load = patch_bytes(
         &(TESCharacter::new_load as usize),
