@@ -146,7 +146,7 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 - [SKSE64](https://skse.silverlock.org/), matching game version
 
 ## Build Requirements
-- [MinGW64: mingw-w64-install.exe](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe) needs to be installed with the x86_64 option NOT i686, and you need add its bin folder to the PATH system variable
+- [MinGW64: mingw-w64-install.exe (For windows users)](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe) needs to be installed with the x86_64 option NOT i686, and you need add its bin folder to the PATH system variable
 - [Rust 1.51+](https://www.rust-lang.org/) compiler
 - `rustup target add x86_64-pc-windows-gnu`
 

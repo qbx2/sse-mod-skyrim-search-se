@@ -19,8 +19,7 @@ const DEBUG: bool = false;
 
 type PluginHandle = u32;
 
-//START AE CODE
-enum KVersionenum {
+enum DataVersion {
     KVersion=1,
 }
 
@@ -30,13 +29,13 @@ pub struct SKSEPluginVersionData {
     dataVersion: u32,
 
     pluginVersion: u32,
-    name: [u8;256],
+    name: [u8; 256],
 
-    author: [u8;256],
-    supportEmail: [u8;256],
+    author: [u8; 256],
+    supportEmail: [u8; 256],
 
     versionIndependence: u32,
-    compatibleVersions: [u32;16],
+    compatibleVersions: [u32; 16],
 
     seVersionRequired: u32,
 }
@@ -44,18 +43,27 @@ pub struct SKSEPluginVersionData {
 // const RUNTIME_VERSION_1_6_318: u32 = 0x010613E0;
 const RUNTIME_VERSION_1_6_323: u32 = 0x01061430;
 
+const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
+    let mut m = [0; M];
+    let mut i = 0;
+    while i < N {
+        m[i] = arr[i];
+        i += 1;
+    }
+    m
+}
+
 #[no_mangle]
 pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
-    dataVersion: KVersionenum::KVersion as u32,
+    dataVersion: DataVersion::KVersion as u32,
     pluginVersion: 3,
-    name: *b"Skyrim Search\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
-    author: *b"qbx2 / lukasaldersley\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
-    supportEmail: *b"open a GitHub issue instead\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
+    name: zero_pad_u8(b"Skyrim Search SE\0"),
+    author: zero_pad_u8(b"qbx2, lukasaldersley\0"),
+    supportEmail: zero_pad_u8(b"open a GitHub issue on qbx2's GitHub\0"),
     versionIndependence: 0,
     compatibleVersions: [RUNTIME_VERSION_1_6_323,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     seVersionRequired: 0,
 };
-//END AE CODE
 
 #[repr(C)]
 pub struct SKSEInterface {
