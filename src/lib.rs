@@ -20,7 +20,7 @@ const DEBUG: bool = false;
 type PluginHandle = u32;
 
 enum DataVersion {
-    KVersion=1,
+    KVersion = 1,
 }
 
 #[allow(non_snake_case)]
@@ -60,7 +60,7 @@ pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
     author: zero_pad_u8(b"qbx2, lukasaldersley\0"),
     supportEmail: zero_pad_u8(b"open a GitHub issue on qbx2's GitHub\0"),
     versionIndependence: 0,
-    compatibleVersions: [RUNTIME_VERSION_1_6_323,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    compatibleVersions: [RUNTIME_VERSION_1_6_323, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     seVersionRequired: 0,
 };
 
