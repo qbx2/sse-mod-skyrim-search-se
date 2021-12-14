@@ -48,8 +48,8 @@ impl TESForm {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let get_name = transmute(image_base + 0x1a1c00);
-    let look_up_by_id = transmute(image_base + 0x19f080);
+    let get_name = transmute(image_base + 0x1a1c00);//1.5.97: 0x196e10 -> 1.6.318: 0x1a1c90 -> addressLib ID: 14720 -> 1.6.323: 0x1a1c00
+    let look_up_by_id = transmute(image_base + 0x19f080);//1.5.97: 0x194230 -> 1.6.318: 0x19f110 -> addressLib ID: 14617 -> 1.6.323: 0x19f080
 
     LateStatic::assign(
         &S,
