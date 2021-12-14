@@ -41,7 +41,8 @@ pub struct SKSEPluginVersionData {
 }
 
 // const RUNTIME_VERSION_1_6_318: u32 = 0x010613E0;
-const RUNTIME_VERSION_1_6_323: u32 = 0x01061430;
+// const RUNTIME_VERSION_1_6_323: u32 = 0x01061430;
+const RUNTIME_VERSION_1_6_342: u32 = 0x01061560;
 
 const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
     let mut m = [0; M];
@@ -61,7 +62,7 @@ pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
     author: zero_pad_u8(b"qbx2, lukasaldersley\0"),
     supportEmail: zero_pad_u8(b"open a GitHub issue on qbx2's GitHub\0"),
     versionIndependence: 0,
-    compatibleVersions: [RUNTIME_VERSION_1_6_323, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    compatibleVersions: [RUNTIME_VERSION_1_6_342, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     seVersionRequired: 0,
 };
 
@@ -100,24 +101,25 @@ pub struct PluginInfo {
     version: u32,
 }
 
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
-pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
-    let skse = unsafe { &*skse };
-    let mut info = unsafe { &mut *info };
+//I'm pretty sure this isn't used in AE
+// #[allow(clippy::not_unsafe_ptr_arg_deref)]
+// #[no_mangle]
+// pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
+//     let skse = unsafe { &*skse };
+//     let mut info = unsafe { &mut *info };
 
-    if skse.runtime_version != RUNTIME_VERSION_1_6_323 {
-        output_debug_string(
-            format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str(),
-        );
-        return false;
-    }
+//     if skse.runtime_version != RUNTIME_VERSION_1_6_323 {
+//         output_debug_string(
+//             format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str(),
+//         );
+//         return false;
+//     }
 
-    info.info_version = InfoVersion::KInfoVersion as u32;
-    info.name = "skyrim-search-se\0".as_ptr() as *const c_char;
-    info.version = 1;
-    true
-}
+//     info.info_version = InfoVersion::KInfoVersion as u32;
+//     info.name = "skyrim-search-se\0".as_ptr() as *const c_char;
+//     info.version = 1;
+//     true
+// }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
