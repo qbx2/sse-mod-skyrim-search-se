@@ -9,7 +9,6 @@ use crate::log::Loggable;
 use anyhow::Context;
 use std::fmt::{Debug, Formatter};
 use std::io::Write;
-use std::os::raw::c_char;
 use std::{fmt, ptr};
 use win_dbg_logger::output_debug_string;
 use winapi::ctypes::c_void;
@@ -89,37 +88,6 @@ impl Debug for SKSEInterface {
             .finish()
     }
 }
-
-enum InfoVersion {
-    KInfoVersion = 1,
-}
-
-#[repr(C)]
-pub struct PluginInfo {
-    info_version: u32,
-    name: *const c_char,
-    version: u32,
-}
-
-//I'm pretty sure this isn't used in AE
-// #[allow(clippy::not_unsafe_ptr_arg_deref)]
-// #[no_mangle]
-// pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
-//     let skse = unsafe { &*skse };
-//     let mut info = unsafe { &mut *info };
-
-//     if skse.runtime_version != RUNTIME_VERSION_1_6_323 {
-//         output_debug_string(
-//             format!("runtime_version mismatch: {:#x}", skse.runtime_version).as_str(),
-//         );
-//         return false;
-//     }
-
-//     info.info_version = InfoVersion::KInfoVersion as u32;
-//     info.name = "skyrim-search-se\0".as_ptr() as *const c_char;
-//     info.version = 1;
-//     true
-// }
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
