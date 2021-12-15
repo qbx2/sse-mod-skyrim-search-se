@@ -89,7 +89,7 @@ impl TESNPC {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let npc_vtable = transmute(image_base + 0x1697a30);
+    let npc_vtable = transmute(image_base + 0x1698a30);
 
     output_debug_string(format!("npc set_edid: {:#x}", npc_vtable + 0x198).as_str());
 
