@@ -142,7 +142,7 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 
 ```
 ## Requirements
-- SkyrimSE *1.6.323*
+- SkyrimSE *1.6.342*
 - [SKSE64](https://skse.silverlock.org/), matching game version
 
 ## Build Requirements
