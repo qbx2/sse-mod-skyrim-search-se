@@ -235,7 +235,7 @@ impl TESQuest {
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
     let quest_vtable = transmute(image_base + 0x169a720);
-    let quest_get_description = transmute(image_base + 0x399100);
+    let quest_get_description = transmute(image_base + 0x398f70);
 
     let original_quest_load = patch_bytes(
         &(TESQuest::new_load as usize),

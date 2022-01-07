@@ -39,7 +39,7 @@ pub struct SKSEPluginVersionData {
     seVersionRequired: u32,
 }
 
-const RUNTIME_VERSION_1_6_342: u32 = 0x01061560;
+const RUNTIME_VERSION_1_6_353: u32 = 0x01061610;
 
 const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
     let mut m = [0; M];
@@ -54,12 +54,12 @@ const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
 #[no_mangle]
 pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
     dataVersion: DataVersion::KVersion as u32,
-    pluginVersion: 3,
+    pluginVersion: 5,
     name: zero_pad_u8(b"Skyrim Search SE\0"),
     author: zero_pad_u8(b"qbx2, lukasaldersley\0"),
     supportEmail: zero_pad_u8(b"open a GitHub issue on qbx2's GitHub\0"),
     versionIndependence: 0,
-    compatibleVersions: [RUNTIME_VERSION_1_6_342, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    compatibleVersions: [RUNTIME_VERSION_1_6_353, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     seVersionRequired: 0,
 };
 

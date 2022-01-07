@@ -18,7 +18,7 @@ Also, You can view your inputs and outputs in log file in `\My Games\Skyrim Spec
 * help command: `ss --help`
 ```
 ss --help
-skyrim-search-se 0.3
+skyrim-search-se 0.5
 Author: qbx2/lukasaldersley | GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se
  
 USAGE:
@@ -142,7 +142,7 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 
 ```
 ## Requirements
-- SkyrimSE *1.6.342*
+- SkyrimSE *1.6.353*
 - [SKSE64](https://skse.silverlock.org/), matching game version
 
 ## Build Requirements
