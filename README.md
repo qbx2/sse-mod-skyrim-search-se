@@ -153,7 +153,6 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 ## Build
 ```
 cargo build
-cargo +stable build --release
 ```
 
 ### Credits 

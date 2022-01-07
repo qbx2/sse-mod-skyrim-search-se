@@ -39,9 +39,6 @@ pub struct SKSEPluginVersionData {
     seVersionRequired: u32,
 }
 
-// const RUNTIME_VERSION_1_6_318: u32 = 0x010613E0;
-// const RUNTIME_VERSION_1_6_323: u32 = 0x01061430;
-// const RUNTIME_VERSION_1_6_342: u32 = 0x01061560;
 const RUNTIME_VERSION_1_6_353: u32 = 0x01061610;
 
 const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
