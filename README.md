@@ -18,17 +18,17 @@ Also, You can view your inputs and outputs in log file in `\My Games\Skyrim Spec
 * help command: `ss --help`
 ```
 ss --help
-skyrim-search-se 0.5
+skyrim-search-se 0.6.0
 Author: qbx2/lukasaldersley | GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se
- 
+
 USAGE:
     ss [FLAGS] <SUBCOMMAND>
- 
+
 FLAGS:
-        --debug      
+        --debug
     -h, --help       Prints help information
     -V, --version    Prints version information
- 
+
 SUBCOMMANDS:
     cell           search cell (location)
     npc            search npc/reference
@@ -43,38 +43,38 @@ SUBCOMMANDS:
 * Search by name
 ```
 ss npc lydia
- form_id  | editor_id         | name  | ref_id 
+ form_id  | editor_id         | name  | ref_id
 ----------+-------------------+-------+----------
- 000A2C8E | HousecarlWhiterun | Lydia | 000A2C94 
+ 000A2C8E | HousecarlWhiterun | Lydia | 000A2C94
 ```
 
 * Search by EditorId
-  
+
 (In my case, there were no reference to `HousecarlMarkarth`/`HousecarlSolitude`/`HousecarlWindhelm`)
 ```
 ss npc housecarl
- form_id  | editor_id               | name                    | ref_id 
+ form_id  | editor_id               | name                    | ref_id
 ----------+-------------------------+-------------------------+----------
- 000A2C8C | HousecarlMarkarth       | Argis the Bulwark       | <null> 
- 000A2C8E | HousecarlWhiterun       | Lydia                   | 000A2C94 
- 000A2C8F | HousecarlSolitude       | Jordis the Sword-Maiden | <null> 
- 000A2C90 | HousecarlWindhelm       | Calder                  | <null> 
- 000A2C91 | HousecarlRiften         | Iona                    | 000A2C93 
- 03005215 | BYOHHousecarlFalkreath  | Rayya                   | 03005216 
- 0300521B | BYOHHousecarlHjaalmarch | Valdimar                | 0300521D 
- 0300521E | BYOHHousecarlPale       | Gregor                  | 0300521F 
+ 000A2C8C | HousecarlMarkarth       | Argis the Bulwark       | <null>
+ 000A2C8E | HousecarlWhiterun       | Lydia                   | 000A2C94
+ 000A2C8F | HousecarlSolitude       | Jordis the Sword-Maiden | <null>
+ 000A2C90 | HousecarlWindhelm       | Calder                  | <null>
+ 000A2C91 | HousecarlRiften         | Iona                    | 000A2C93
+ 03005215 | BYOHHousecarlFalkreath  | Rayya                   | 03005216
+ 0300521B | BYOHHousecarlHjaalmarch | Valdimar                | 0300521D
+ 0300521E | BYOHHousecarlPale       | Gregor                  | 0300521F
 ```
 * Search by FormId/RefId
 ```
 ss npc a2c8e
- form_id  | editor_id         | name  | ref_id 
+ form_id  | editor_id         | name  | ref_id
 ----------+-------------------+-------+----------
- 000A2C8E | HousecarlWhiterun | Lydia | 000A2C94 
- 
+ 000A2C8E | HousecarlWhiterun | Lydia | 000A2C94
+
 ss npc a2c94
- form_id  | editor_id         | name  | ref_id 
+ form_id  | editor_id         | name  | ref_id
 ----------+-------------------+-------+----------
- 000A2C8E | HousecarlWhiterun | Lydia | 000A2C94 
+ 000A2C8E | HousecarlWhiterun | Lydia | 000A2C94
  ```
 ## Search Cells
 - command: `ss cell <query>`
@@ -82,9 +82,9 @@ ss npc a2c94
 
 ```
 ss cell breezehome
- form_id  | editor_id          | name 
+ form_id  | editor_id          | name
 ----------+--------------------+------------
- 000165A8 | WhiterunBreezehome | Breezehome 
+ 000165A8 | WhiterunBreezehome | Breezehome
  ```
 
 ## Search Quests
@@ -93,9 +93,9 @@ ss cell breezehome
 
 ```
 ss quest forbidden legend
- form_id  | editor_id        | name 
+ form_id  | editor_id        | name
 ----------+------------------+------------------
- 000E4D31 | dunGauldursonQST | Forbidden Legend 
+ 000E4D31 | dunGauldursonQST | Forbidden Legend
 ```
 
 ## Search Quest Stages
@@ -104,18 +104,18 @@ ss quest forbidden legend
 
 ```
 ss qs forbidden
- form_id  | editor_id        | name             | stage | log 
+ form_id  | editor_id        | name             | stage | log
 ----------+------------------+------------------+-------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 6     | In Reachwater Rock, I found a cryptic message that said the tomb here had been sealed, and should be forgotten forever. What is the story of this place? 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 7     | In Folgunthur, I found a cryptic message on the body of a powerful Draugr, condemning him for his ancient crimes. What was his story? Why was he entombed with a broken amulet? 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 8     | In Geirmund's Hall, I found a cryptic message on the body of a powerful Draugr, condemning him for his ancient crimes. What was his story? Why was he entombed with a broken amulet? 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 9     | In Saarthal, I found a cryptic message on the body of a powerful Draugr, condemning him for his ancient crimes. What was his story? Why was he entombed with a broken amulet? 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 10    | Long ago, the Archmage Gauldur was murdered, and his three sons were hunted down by King Harald's personal battlemage. The entire incident was covered up, their names struck from every record. But the legend survived. Perhaps someone still knows the truth of this ancient tale. 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 20    | Long ago, the Archmage Gauldur was murdered, and his three sons were hunted down by King Harald's personal battlemage. The mage Daynas Valen spent his life searching for the truth of this tale, and came to Folgunthur with the key needed to unlock its secret. 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 30    | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. The brothers were hunted down in secret and sealed in tombs across Skyrim. To reclaim the amulet, I will need to seek out their final resting places. 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 100   | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. I defeated the brothers and reclaimed the fragments of the amulet. Perhaps Gauldur's tomb holds the secret to restoring it to its original form. 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 105   | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. I collected the fragments of the shattered amulet and brought them to Gauldur's tomb, where the ghosts of the three brothers ambushed me. 
- 000E4D31 | dunGauldursonQST | Forbidden Legend | 150   | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. I defeated the undead brothers, located the fragments of the shattered amulet, and forged it anew in Gauldur's tomb. 
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 6     | In Reachwater Rock, I found a cryptic message that said the tomb here had been sealed, and should be forgotten forever. What is the story of this place?
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 7     | In Folgunthur, I found a cryptic message on the body of a powerful Draugr, condemning him for his ancient crimes. What was his story? Why was he entombed with a broken amulet?
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 8     | In Geirmund's Hall, I found a cryptic message on the body of a powerful Draugr, condemning him for his ancient crimes. What was his story? Why was he entombed with a broken amulet?
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 9     | In Saarthal, I found a cryptic message on the body of a powerful Draugr, condemning him for his ancient crimes. What was his story? Why was he entombed with a broken amulet?
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 10    | Long ago, the Archmage Gauldur was murdered, and his three sons were hunted down by King Harald's personal battlemage. The entire incident was covered up, their names struck from every record. But the legend survived. Perhaps someone still knows the truth of this ancient tale.
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 20    | Long ago, the Archmage Gauldur was murdered, and his three sons were hunted down by King Harald's personal battlemage. The mage Daynas Valen spent his life searching for the truth of this tale, and came to Folgunthur with the key needed to unlock its secret.
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 30    | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. The brothers were hunted down in secret and sealed in tombs across Skyrim. To reclaim the amulet, I will need to seek out their final resting places.
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 100   | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. I defeated the brothers and reclaimed the fragments of the amulet. Perhaps Gauldur's tomb holds the secret to restoring it to its original form.
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 105   | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. I collected the fragments of the shattered amulet and brought them to Gauldur's tomb, where the ghosts of the three brothers ambushed me.
+ 000E4D31 | dunGauldursonQST | Forbidden Legend | 150   | Long ago, the Archmage Gauldur was murdered by his three sons, who stole his amulet of power and divided it among themselves. I defeated the undead brothers, located the fragments of the shattered amulet, and forged it anew in Gauldur's tomb.
 ```
 
 ## Raw Query (Advanced)
@@ -128,35 +128,35 @@ ss qs forbidden
 (Note that you may quote your sql because the input is parsed by shlex)
 ```
 ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
- form_id  | editor_id             | name 
+ form_id  | editor_id             | name
 ----------+-----------------------+-------------------------
- 000A2C8C | HousecarlMarkarth     | Argis the Bulwark 
- 000A2C8E | HousecarlWhiterun     | Lydia 
- 000A2C8F | HousecarlSolitude     | Jordis the Sword-Maiden 
- 000A2C90 | HousecarlWindhelm     | Calder 
- 000A2C91 | HousecarlRiften       | Iona 
- 000A2CAF | DA01LvlDremoraWarlock |  
- 000A2CEB | ArgonianMalePreset03  |  
- 000A2CEF | ArgonianMalePreset04  |  
- 000A2CF0 | ArgonianMalePreset05  |  
+ 000A2C8C | HousecarlMarkarth     | Argis the Bulwark
+ 000A2C8E | HousecarlWhiterun     | Lydia
+ 000A2C8F | HousecarlSolitude     | Jordis the Sword-Maiden
+ 000A2C90 | HousecarlWindhelm     | Calder
+ 000A2C91 | HousecarlRiften       | Iona
+ 000A2CAF | DA01LvlDremoraWarlock |
+ 000A2CEB | ArgonianMalePreset03  |
+ 000A2CEF | ArgonianMalePreset04  |
+ 000A2CF0 | ArgonianMalePreset05  |
 
 ```
 ## Requirements
-- SkyrimSE *1.6.353*
+- SkyrimSE *1.6.629*
 - [SKSE64](https://skse.silverlock.org/), matching game version
 
 ## Build Requirements
 - [MinGW64: mingw-w64-install.exe (For windows users)](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe) needs to be installed with the x86_64 option NOT i686, and you need add its bin folder to the PATH system variable
-- [Rust 1.51+](https://www.rust-lang.org/) compiler
-- `rustup target add x86_64-pc-windows-gnu`
+- Latest stable [Rust](https://www.rust-lang.org/) compiler
 
 ## Build
 ```
 cargo build
 ```
 
-### Credits 
+### Credits
 [kmdreko](https://stackoverflow.com/users/2189130/kmdreko) on Stack Overflow for helping with some Rust problems
+[meh321](https://www.nexusmods.com/skyrimspecialedition/mods/32444) for distributing versionlib for easy update
 
 ### Disclaimer
 This plugin was not created by, and is not affiliated with, the website SkyrimSearch.com.
