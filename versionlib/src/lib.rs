@@ -1,3 +1,4 @@
+// Ported versionlibdb.h from https://www.nexusmods.com/skyrimspecialedition/mods/32444
 use std::{fs::File, io::Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
