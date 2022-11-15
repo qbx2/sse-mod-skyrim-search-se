@@ -1,6 +1,6 @@
 [package]
 name = "skyrim-search-se"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["qbx2 <sunyeop97@gmail.com>"]
 edition = "2021"
 
