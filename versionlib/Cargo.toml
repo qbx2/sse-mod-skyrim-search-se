@@ -1,0 +1,9 @@
+[package]
+name = "versionlib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+byteorder = "1"
+hashbrown = "0.13"
+thiserror = "1"
