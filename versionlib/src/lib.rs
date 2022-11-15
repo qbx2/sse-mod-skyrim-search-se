@@ -230,8 +230,6 @@ pub fn load(filename: &str) -> Result<VersionlibData, VersionlibError> {
         pvid = q1;
     }
 
-    println!("{version:?} {module_name:?} {ptr_size} {addr_count}");
-
     Ok(VersionlibData {
         version,
         module_name,
@@ -249,6 +247,7 @@ mod tests {
     #[test]
     fn it_works() {
         let result = load("bin/versionlib-1-6-323-0.bin").unwrap();
+        assert_eq!([1, 6, 323, 0], result.version);
         assert_eq!(401203, result.rdata[&0x2f9a800]);
         assert_eq!(51109, result.rdata[&0x8893c0]);
         assert_eq!(207886, result.rdata[&0x1753670]);

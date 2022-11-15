@@ -69,7 +69,7 @@ impl TESObjectCELL {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let cell_vtable = transmute(image_base + 0x165eab0);
+    let cell_vtable = transmute(image_base + versionlib!(190143));
 
     let original_cell_load = patch_bytes(
         &(TESObjectCELL::new_load as usize),

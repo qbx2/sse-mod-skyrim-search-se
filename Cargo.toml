@@ -17,6 +17,7 @@ prettytable-rs = "0.8"
 region = "2"
 rusqlite = { version = "0.24", features = ["bundled"] }
 shlex = "1"
+versionlib-macro = { path = "versionlib-macro" }
 win_dbg_logger = "0.1"
 winapi = { version = "0.3", features = ["libloaderapi", "shlobj", "minwindef", "ntdef", "errhandlingapi", "winerror", "winuser"] }
 

@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate versionlib_macro;
+
 mod app;
 mod console;
 mod db;
@@ -39,8 +42,6 @@ pub struct SKSEPluginVersionData {
     seVersionRequired: u32,
 }
 
-const RUNTIME_VERSION_1_6_353: u32 = 0x01061610;
-
 const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
     let mut m = [0; M];
     let mut i = 0;
@@ -59,7 +60,24 @@ pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
     author: zero_pad_u8(b"qbx2, lukasaldersley\0"),
     supportEmail: zero_pad_u8(b"open a GitHub issue on qbx2's GitHub\0"),
     versionIndependence: 0,
-    compatibleVersions: [RUNTIME_VERSION_1_6_353, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    compatibleVersions: [
+        target_version!(),
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ],
     seVersionRequired: 0,
 };
 
