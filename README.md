@@ -155,8 +155,8 @@ cargo build
 ```
 
 ### Credits
-[kmdreko](https://stackoverflow.com/users/2189130/kmdreko) on Stack Overflow for helping with some Rust problems
-[meh321](https://www.nexusmods.com/skyrimspecialedition/mods/32444) for distributing versionlib for easy update
+- [kmdreko](https://stackoverflow.com/users/2189130/kmdreko) on Stack Overflow for helping with some Rust problems
+- [meh321](https://www.nexusmods.com/skyrimspecialedition/mods/32444) for distributing versionlib for easy update
 
 ### Disclaimer
 This plugin was not created by, and is not affiliated with, the website SkyrimSearch.com.
