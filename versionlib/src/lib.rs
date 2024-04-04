@@ -247,8 +247,11 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let result = load("bin/versionlib-1-6-323-0.bin").unwrap();
-        assert_eq!([1, 6, 323, 0], result.version);
+        let result = load("bin/versionlib-1-6-1130-0.bin").unwrap();
+        assert_eq!([1, 6, 1130, 0], result.version);
+        for key in result.data.keys() {
+            println!("{}", key)
+        }
         assert_eq!(401203, result.rdata[&0x2f9a800]);
         assert_eq!(51109, result.rdata[&0x8893c0]);
         assert_eq!(207886, result.rdata[&0x1753670]);
