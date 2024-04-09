@@ -17,7 +17,7 @@ use win_dbg_logger::output_debug_string;
 use winapi::ctypes::c_void;
 use winapi::um::libloaderapi::GetModuleHandleA;
 
-const DEBUG: bool = false;
+const DEBUG: bool = true;
 
 type PluginHandle = u32;
 
