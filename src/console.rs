@@ -80,7 +80,7 @@ pub(crate) fn print<T: Into<Vec<u8>>>(msg: T) {
 }
 
 pub(crate) unsafe fn init(image_base: usize) -> anyhow::Result<()> {
-    let target_addr = transmute(image_base + versionlib!(441582));
+    let target_addr = transmute(image_base + versionlib!(21890));
     let process_console_input_hook =
         GenericDetour::<fn(usize, i64, i64, i64)>::new(target_addr, new_process_console_input)
             .context("initialize")?;
