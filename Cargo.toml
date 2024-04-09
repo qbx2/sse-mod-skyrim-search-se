@@ -13,7 +13,7 @@ clap = "2"
 detour = { version = "0.8", default-features = false }
 late-static = "0.4"
 lazy_static = "1"
-prettytable-rs = "0.8"
+prettytable-rs = "0.10"
 region = "2"
 rusqlite = { version = "0.24", features = ["bundled"] }
 shlex = "1"
