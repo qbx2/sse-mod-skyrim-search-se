@@ -20,7 +20,7 @@ jobs:
     - name: Build
       run: |
         rustup target add x86_64-pc-windows-gnu
-        cargo build --verbose --release
+        cargo build --verbose
         mkdir dist/SKSE/Plugins/
         mv target/x86_64-pc-windows-gnu/release/skyrim_search_se.dll dist/SKSE/Plugins/
 
