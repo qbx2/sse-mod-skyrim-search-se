@@ -20,12 +20,12 @@ jobs:
     - name: Build
       run: |
         rustup target add x86_64-pc-windows-gnu
-        cargo build --verbose
+        cargo build --verbose --release
         mkdir dist/SKSE/Plugins/
-        mv target/x86_64-pc-windows-gnu/debug/skyrim_search_se.dll dist/SKSE/Plugins/
+        mv target/x86_64-pc-windows-gnu/release/skyrim_search_se.dll dist/SKSE/Plugins/
 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2.2.2
       with:
-        name: debug
+        name: release
         path: dist
