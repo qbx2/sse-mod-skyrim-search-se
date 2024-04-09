@@ -458,7 +458,7 @@ fn repr_column(name: Option<&str>, column: ValueRef) -> String {
 
 fn set_titles(rows: &mut rusqlite::Rows, table: &mut prettytable::Table) -> Option<()> {
     let names = rows.column_names()?;
-    console::print(fmt!("names: {:?}", names));
+    console::print(format!("names: {:?}", names));
     table.set_format(*prettytable::format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
     table.set_titles(names.into_iter().map(prettytable::Cell::new).collect());
     Some(())
