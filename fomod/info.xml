@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fomod>
+  <Name>Skyrim Search SE</Name>
+  <Author>qbx2</Author>
+  <Version>@VERSION@</Version><!-- filled in from Cargo.toml by build-all.ps1 -->
+  <Website>https://github.com/qbx2/sse-mod-skyrim-search-se</Website>
+  <Description>Console commands to search NPCs, cells and quests by FormID / EditorID / name.</Description>
+</fomod>

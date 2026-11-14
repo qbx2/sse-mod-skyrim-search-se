@@ -18,7 +18,7 @@ Also, You can view your inputs and outputs in log file in `\My Games\Skyrim Spec
 * help command: `ss --help`
 ```
 ss --help
-skyrim-search-se 0.7.0
+skyrim-search-se 0.11.0
 Author: qbx2/lukasaldersley | GitHub: https://github.com/qbx2/sse-mod-skyrim-search-se
 
 USAGE:
@@ -142,8 +142,12 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 
 ```
 ## Requirements
-- SkyrimSE(AE) [click here to view runtime version](target_version.txt)
-- [SKSE64](https://skse.silverlock.org/), matching game version
+One of:
+- Skyrim Special Edition / Anniversary Edition 1.6.1170, with [SKSE64](https://skse.silverlock.org/) matching the game version
+- Skyrim VR 1.4.15, with [SKSEVR](https://skse.silverlock.org/)
+
+The release archive contains one DLL per game version and a FOMOD installer that lets you pick yours.
+Each DLL only loads on the runtime it was built for.
 
 ## Build Requirements
 - [MinGW64: mingw-w64-install.exe (For windows users)](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe) needs to be installed with the x86_64 option NOT i686, and you need add its bin folder to the PATH system variable
@@ -153,6 +157,14 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 ```
 cargo build
 ```
+This builds for the runtime version in [target_version.txt](target_version.txt); the matching
+`versionlib/bin/versionlib-<version>.bin` is read at compile time.
+
+To build every supported version and assemble the FOMOD archive layout in `dist/`:
+```
+./build-all.ps1
+```
+Skyrim VR has no official versionlib `.bin`; see [versionlib/VR.md](versionlib/VR.md) for how the VR one is generated.
 
 ### Credits
 - [kmdreko](https://stackoverflow.com/users/2189130/kmdreko) on Stack Overflow for helping with some Rust problems

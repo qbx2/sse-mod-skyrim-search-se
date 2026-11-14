@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://qconsulting.ca/fo3/ModConfig5.0.xsd">
+  <moduleName>Skyrim Search SE</moduleName>
+  <installSteps order="Explicit">
+    <installStep name="Game version">
+      <optionalFileGroups order="Explicit">
+        <group name="Select your game version" type="SelectExactlyOne">
+          <plugins order="Explicit">
+            <plugin name="Skyrim Special Edition 1.6.1170">
+              <description>Skyrim Special Edition / Anniversary Edition, runtime 1.6.1170 (Steam). Requires SKSE64.</description>
+              <files>
+                <folder source="AE-1.6.1170" destination="" priority="0"/>
+              </files>
+              <typeDescriptor>
+                <type name="Optional"/>
+              </typeDescriptor>
+            </plugin>
+            <plugin name="Skyrim VR 1.4.15">
+              <description>Skyrim VR, runtime 1.4.15. Requires SKSEVR.</description>
+              <files>
+                <folder source="VR-1.4.15" destination="" priority="0"/>
+              </files>
+              <typeDescriptor>
+                <type name="Optional"/>
+              </typeDescriptor>
+            </plugin>
+          </plugins>
+        </group>
+      </optionalFileGroups>
+    </installStep>
+  </installSteps>
+</config>
