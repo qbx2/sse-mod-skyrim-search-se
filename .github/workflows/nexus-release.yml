@@ -18,6 +18,7 @@ jobs:
     outputs:
       version: ${{ steps.archive.outputs.version }}
       filename: ${{ steps.archive.outputs.filename }}
+      description: ${{ steps.archive.outputs.description }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,24 +51,35 @@ jobs:
             exit 1
           fi
 
-          python3 - <<'PY'
+          description=$(python3 - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
 
           dist = Path("dist")
-          folders = ET.parse(dist / "fomod" / "ModuleConfig.xml").findall(".//files/folder")
+          config = ET.parse(dist / "fomod" / "ModuleConfig.xml")
+          folders = config.findall(".//files/folder")
           if not folders:
               raise SystemExit("FOMOD has no installable DLL options")
           for folder in folders:
               dll = dist / folder.attrib["source"] / "SKSE" / "Plugins" / "skyrim_search_se.dll"
               if not dll.is_file() or dll.stat().st_size == 0:
                   raise SystemExit(f"Missing or empty DLL: {dll}")
+          names = []
+          for plugin in config.findall(".//plugins/plugin"):
+              name = plugin.attrib["name"]
+              if name == "Skyrim Special Edition 1.6.1170":
+                  name = "Skyrim AE 1.6.1170"
+              elif name.startswith("Skyrim Special Edition "):
+                  name = name.replace("Skyrim Special Edition ", "Skyrim SE ", 1)
+              names.append(f"{name} Runtime")
+          print(" / ".join(names))
           PY
+          )
 
           filename="skyrim-search-se-v$version.zip"
           (cd dist && zip -q -r "../$filename" .)
           unzip -tq "$filename"
-          printf 'version=%s\nfilename=%s\n' "$version" "$filename" >> "$GITHUB_OUTPUT"
+          printf 'version=%s\nfilename=%s\ndescription=%s\n' "$version" "$filename" "$description" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -106,6 +118,7 @@ jobs:
           filename: ${{ needs.package.outputs.filename }}
           version: ${{ needs.package.outputs.version }}
           display_name: Skyrim Search SE
+          description: ${{ needs.package.outputs.description }}
           category: main
           primary_mod_manager_download: true
           update_mod_version: true
