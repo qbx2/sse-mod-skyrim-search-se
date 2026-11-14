@@ -10,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 # game runtime version -> folder referenced by fomod/ModuleConfig.xml
 $targets = [ordered]@{
     '1.6.1170.0' = 'AE-1.6.1170'
+    '1.7.104.0'  = 'SE-1.7.104'
     '1.4.15.0'   = 'VR-1.4.15'
 }
 

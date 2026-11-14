@@ -6,8 +6,17 @@
       <optionalFileGroups order="Explicit">
         <group name="Select your game version" type="SelectExactlyOne">
           <plugins order="Explicit">
+            <plugin name="Skyrim Special Edition 1.7.104">
+              <description>Skyrim Special Edition / Anniversary Edition, runtime 1.7.104. Requires SKSE64 2.3.1.</description>
+              <files>
+                <folder source="SE-1.7.104" destination="" priority="0"/>
+              </files>
+              <typeDescriptor>
+                <type name="Optional"/>
+              </typeDescriptor>
+            </plugin>
             <plugin name="Skyrim Special Edition 1.6.1170">
-              <description>Skyrim Special Edition / Anniversary Edition, runtime 1.6.1170 (Steam). Requires SKSE64.</description>
+              <description>Skyrim Special Edition / Anniversary Edition, runtime 1.6.1170 (Steam). Requires SKSE64 2.2.6.</description>
               <files>
                 <folder source="AE-1.6.1170" destination="" priority="0"/>
               </files>

@@ -143,8 +143,9 @@ ss raw SELECT * FROM npc WHERE form_id > 0xa2c00 AND form_id < 0xa2d00;
 ```
 ## Requirements
 One of:
-- Skyrim Special Edition / Anniversary Edition 1.6.1170, with [SKSE64](https://skse.silverlock.org/) matching the game version
-- Skyrim VR 1.4.15, with [SKSEVR](https://skse.silverlock.org/)
+- Skyrim Special Edition / Anniversary Edition 1.7.104, with [SKSE64](https://skse.silverlock.org/) 2.3.1
+- Skyrim Special Edition / Anniversary Edition 1.6.1170, with [SKSE64](https://skse.silverlock.org/) 2.2.6
+- Skyrim VR 1.4.15, with [SKSEVR](https://skse.silverlock.org/) 2.0.12
 
 The release archive contains one DLL per game version and a FOMOD installer that lets you pick yours.
 Each DLL only loads on the runtime it was built for.
