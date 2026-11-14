@@ -15,7 +15,18 @@ use winapi::um::shlobj::{
     SHGetFolderPathA, CSIDL_FLAG_CREATE, CSIDL_MYDOCUMENTS, SHGFP_TYPE_CURRENT,
 };
 
-const LOG_PATH: &str = "\\My Games\\Skyrim Special Edition\\SKSE\\skyrim-search-se.log";
+/// Skyrim VR runtime (1.4.15), packed like `target_version!()`.
+const SKYRIM_VR_VERSION: u32 = 0x010400F0;
+
+/// Skyrim VR keeps its files in its own "My Games" folder; every other runtime is SE/AE.
+// The lowest 4 bits are the runtime type, not the version.
+const IS_VR: bool = (target_version!() & !0xf) == SKYRIM_VR_VERSION;
+
+const LOG_PATH: &str = if IS_VR {
+    "\\My Games\\Skyrim VR\\SKSE\\skyrim-search-se.log"
+} else {
+    "\\My Games\\Skyrim Special Edition\\SKSE\\skyrim-search-se.log"
+};
 
 lazy_static! {
     pub static ref LOG: Mutex<LineWriter<File>> = {

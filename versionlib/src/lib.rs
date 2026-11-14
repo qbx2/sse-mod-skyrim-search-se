@@ -13,7 +13,19 @@ pub enum VersionlibError {
     Format { format: u32 },
     #[error("unexpected tn_len: {tn_len}")]
     TnLenRange { tn_len: i32 },
+    #[error("format 5: file size {size} is not a {V5_HEADER_SIZE:#x}-byte header followed by whole u32 entries")]
+    V5Size { size: u64 },
+    #[error("format 5: header declares {declared} entries but the file holds {actual}")]
+    V5EntryCount { declared: u32, actual: u64 },
 }
+
+/// Format 5 header size; the u32 offset table starts right after it (at 0x60, not 0x64).
+const V5_HEADER_SIZE: usize = 0x60;
+const V5_VERSION_OFFSET: usize = 0x04;
+const V5_MODULE_NAME_OFFSET: usize = 0x14;
+const V5_MODULE_NAME_LEN: usize = 64;
+const V5_PTR_SIZE_OFFSET: usize = 0x54;
+const V5_COUNT_OFFSET: usize = 0x5C;
 
 pub struct VersionlibData {
     pub version: [u32; 4],
@@ -35,8 +47,10 @@ pub fn load(filename: &str) -> Result<VersionlibData, VersionlibError> {
             reason: e.to_string(),
         })?;
 
-    if format != 2 {
-        return Err(VersionlibError::Format { format });
+    match format {
+        2 => {}
+        5 => return load_v5(f),
+        _ => return Err(VersionlibError::Format { format }),
     }
 
     let version: [u32; 4] = (0..4)
@@ -241,9 +255,104 @@ pub fn load(filename: &str) -> Result<VersionlibData, VersionlibError> {
     })
 }
 
+fn load_v5(mut f: File) -> Result<VersionlibData, VersionlibError> {
+    let read_err = |e: std::io::Error| VersionlibError::Read {
+        reason: e.to_string(),
+    };
+
+    // `load` already read the 4-byte format field; read the rest and re-add it so
+    // every offset below matches the documented layout.
+    let mut buf = vec![0u8; 4];
+    f.read_to_end(&mut buf).map_err(read_err)?;
+    let size = buf.len() as u64;
+
+    if buf.len() < V5_HEADER_SIZE || (buf.len() - V5_HEADER_SIZE) % 4 != 0 {
+        return Err(VersionlibError::V5Size { size });
+    }
+
+    let u32_at = |off: usize| u32::from_le_bytes(buf[off..off + 4].try_into().unwrap());
+
+    let version: [u32; 4] = std::array::from_fn(|i| u32_at(V5_VERSION_OFFSET + 4 * i));
+
+    let name_field = &buf[V5_MODULE_NAME_OFFSET..V5_MODULE_NAME_OFFSET + V5_MODULE_NAME_LEN];
+    let name_len = name_field
+        .iter()
+        .position(|&b| b == 0)
+        .unwrap_or(V5_MODULE_NAME_LEN);
+    let module_name_raw = name_field[..name_len].to_vec();
+    let module_name = String::from_utf8(module_name_raw.clone());
+
+    let ptr_size = u32_at(V5_PTR_SIZE_OFFSET);
+
+    let declared = u32_at(V5_COUNT_OFFSET);
+    let actual = (size - V5_HEADER_SIZE as u64) / 4;
+    if declared as u64 != actual {
+        return Err(VersionlibError::V5EntryCount { declared, actual });
+    }
+
+    let mut data = hashbrown::HashMap::<u64, u64>::with_capacity(declared as _);
+    let mut rdata = hashbrown::HashMap::<u64, u64>::with_capacity(declared as _);
+
+    for (id, entry) in buf[V5_HEADER_SIZE..].chunks_exact(4).enumerate() {
+        let offset = u32::from_le_bytes(entry.try_into().unwrap()) as u64;
+        if offset == 0 {
+            continue; // id does not exist in this version
+        }
+        data.insert(id as u64, offset);
+        rdata.insert(offset, id as u64);
+    }
+
+    Ok(VersionlibData {
+        version,
+        module_name,
+        module_name_raw,
+        ptr_size,
+        data,
+        rdata,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn format5_1_7_104() {
+        let result = load("bin/versionlib-1-7-104-0.bin").unwrap();
+        assert_eq!([1, 7, 104, 0], result.version);
+        assert_eq!(Ok("SkyrimSE.exe"), result.module_name.as_deref());
+        assert_eq!(8, result.ptr_size);
+        assert_eq!(0x1e5860, result.data[&14617]);
+        assert_eq!(0x90f1b0, result.data[&51109]);
+        assert_eq!(0x90f1e0, result.data[&51110]);
+        assert_eq!(0x185ec20, result.data[&195816]);
+        assert_eq!(0x343d00, result.data[&441582]);
+        assert_eq!(51109, result.rdata[&0x90f1b0]);
+        // value 0 means "no such id": it must not be in the table
+        assert!(!result.data.contains_key(&0));
+    }
+
+    #[test]
+    fn format5_rejects_entry_count_mismatch() {
+        let mut bytes = std::fs::read("bin/versionlib-1-7-104-0.bin").unwrap();
+        bytes.truncate(bytes.len() - 4); // one entry short of the declared count
+        let path = std::env::temp_dir().join("versionlib-test-truncated-v5.bin");
+        std::fs::write(&path, &bytes).unwrap();
+        let err = load(path.to_str().unwrap()).err().unwrap();
+        let _ = std::fs::remove_file(&path);
+        assert!(
+            matches!(err, VersionlibError::V5EntryCount { declared, actual } if actual + 1 == declared as u64),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn format2_1_6_1170_unchanged() {
+        let result = load("bin/versionlib-1-6-1170-0.bin").unwrap();
+        assert_eq!([1, 6, 1170, 0], result.version);
+        assert_eq!(0x8f91f0, result.data[&51109]);
+        assert_eq!(0x17e4d50, result.data[&195816]);
+    }
 
     #[test]
     fn it_works() {

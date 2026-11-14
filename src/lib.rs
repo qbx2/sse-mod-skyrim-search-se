@@ -52,10 +52,27 @@ const fn zero_pad_u8<const N: usize, const M: usize>(arr: &[u8; N]) -> [u8; M] {
     m
 }
 
+const fn parse_u32(s: &str) -> u32 {
+    let bytes = s.as_bytes();
+    let mut n = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        n = n * 10 + (bytes[i] - b'0') as u32;
+        i += 1;
+    }
+    n
+}
+
+/// Plugin version reported to SKSE, taken from Cargo.toml and packed like `target_version!()`:
+/// major << 24 | minor << 16 | patch << 4 (0.11.0 -> 0x000B0000).
+const PLUGIN_VERSION: u32 = (parse_u32(env!("CARGO_PKG_VERSION_MAJOR")) << 24)
+    | (parse_u32(env!("CARGO_PKG_VERSION_MINOR")) << 16)
+    | (parse_u32(env!("CARGO_PKG_VERSION_PATCH")) << 4);
+
 #[no_mangle]
 pub static SKSEPlugin_Version: SKSEPluginVersionData = SKSEPluginVersionData {
     dataVersion: DataVersion::KVersion as u32,
-    pluginVersion: 5,
+    pluginVersion: PLUGIN_VERSION,
     name: zero_pad_u8(b"Skyrim Search SE\0"),
     author: zero_pad_u8(b"qbx2, lukasaldersley\0"),
     supportEmail: zero_pad_u8(b"open a GitHub issue on qbx2's GitHub\0"),
@@ -105,6 +122,33 @@ impl Debug for SKSEInterface {
     }
 }
 
+#[repr(C)]
+pub struct PluginInfo {
+    info_version: u32,
+    name: *const u8,
+    version: u32,
+}
+
+/// Legacy entry point, used by SKSEVR and pre-AE SKSE64, which ignore `SKSEPlugin_Version`.
+///
+/// Addresses are baked in at compile time, so refuse to load on any other runtime
+/// (e.g. when the wrong build was picked in the installer).
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[no_mangle]
+pub extern "C" fn SKSEPlugin_Query(skse: *const SKSEInterface, info: *mut PluginInfo) -> bool {
+    const TARGET_VERSION: u32 = target_version!();
+    // The lowest 4 bits are the runtime type, not the version (Skyrim VR reports 0x010400F1).
+    const VERSION_MASK: u32 = !0xf;
+
+    unsafe {
+        (*info).info_version = 1;
+        (*info).name = b"skyrim-search-se\0".as_ptr();
+        (*info).version = PLUGIN_VERSION;
+
+        ((*skse).runtime_version & VERSION_MASK) == (TARGET_VERSION & VERSION_MASK)
+    }
+}
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
@@ -138,7 +182,7 @@ pub extern "C" fn SKSEPlugin_Load(skse: *const SKSEInterface) -> bool {
         log::LOG
             .lock()
             .unwrap()
-            .write_all(format!("error SKSEPlugin_Load: {}\n", err).as_bytes())
+            .write_all(format!("error SKSEPlugin_Load: {:#}\n", err).as_bytes())
             .unwrap();
         return false;
     }
