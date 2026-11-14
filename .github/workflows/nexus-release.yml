@@ -1,0 +1,124 @@
+name: Nexus Mods release
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - '.github/workflows/nexus-release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.event_name == 'pull_request' || !github.event.release.prerelease
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.archive.outputs.version }}
+      filename: ${{ steps.archive.outputs.filename }}
+      description: ${{ steps.archive.outputs.description }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up the Windows cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+          rustup target add x86_64-pc-windows-gnu
+
+      - name: Test the Address Library reader
+        run: cargo test --locked --manifest-path versionlib/Cargo.toml --target x86_64-unknown-linux-gnu
+
+      - name: Build all game versions
+        shell: pwsh
+        run: ./build-all.ps1
+
+      - name: Validate and archive the FOMOD
+        id: archive
+        shell: bash
+        run: |
+          version=$(python3 -c 'import xml.etree.ElementTree as ET; print(ET.parse("dist/fomod/info.xml").getroot().findtext("Version", ""))')
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Expected a stable Cargo version in FOMOD info.xml"
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == release && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::The GitHub Release tag must be v$version to match Cargo.toml"
+            exit 1
+          fi
+
+          description=$(python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          dist = Path("dist")
+          config = ET.parse(dist / "fomod" / "ModuleConfig.xml")
+          folders = config.findall(".//files/folder")
+          if not folders:
+              raise SystemExit("FOMOD has no installable DLL options")
+          for folder in folders:
+              dll = dist / folder.attrib["source"] / "SKSE" / "Plugins" / "skyrim_search_se.dll"
+              if not dll.is_file() or dll.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty DLL: {dll}")
+          names = []
+          for plugin in config.findall(".//plugins/plugin"):
+              name = plugin.attrib["name"]
+              if name == "Skyrim Special Edition 1.6.1170":
+                  name = "Skyrim AE 1.6.1170"
+              elif name.startswith("Skyrim Special Edition "):
+                  name = name.replace("Skyrim Special Edition ", "Skyrim SE ", 1)
+              names.append(f"{name} Runtime")
+          print(" / ".join(names))
+          PY
+          )
+
+          filename="skyrim-search-se-v$version.zip"
+          (cd dist && zip -q -r "../$filename" .)
+          unzip -tq "$filename"
+          printf 'version=%s\nfilename=%s\ndescription=%s\n' "$version" "$filename" "$description" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexus-fomod
+          path: ${{ steps.archive.outputs.filename }}
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: nexus-mods-production
+      cancel-in-progress: false
+    steps:
+      - name: Verify upload configuration
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          NEXUSMODS_FILE_ID: ${{ vars.NEXUSMODS_FILE_ID }}
+        run: |
+          if [[ -z "$NEXUSMODS_API_KEY" || -z "$NEXUSMODS_FILE_ID" ]]; then
+            echo "::error::Set NEXUSMODS_API_KEY (secret) and NEXUSMODS_FILE_ID (variable) for the existing Nexus main file"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nexus-fomod
+
+      - name: Upload a new version of the Nexus main file
+        uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2 # v1.0.0-beta.11
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: ${{ vars.NEXUSMODS_FILE_ID }}
+          filename: ${{ needs.package.outputs.filename }}
+          version: ${{ needs.package.outputs.version }}
+          display_name: Skyrim Search SE
+          description: ${{ needs.package.outputs.description }}
+          category: main
+          primary_mod_manager_download: true
+          update_mod_version: true
