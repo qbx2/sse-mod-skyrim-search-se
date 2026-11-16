@@ -88,6 +88,8 @@ jobs:
           if-no-files-found: error
 
   publish:
+    permissions:
+      contents: write
     if: github.event_name == 'release' && !github.event.release.prerelease
     needs: package
     runs-on: ubuntu-24.04
@@ -109,6 +111,32 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: nexus-fomod
+
+      # Reuse the package artifact: never rebuild or replace a released asset.
+      - name: Attach the FOMOD to the GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ARCHIVE: ${{ needs.package.outputs.filename }}
+        run: |
+          set -euo pipefail
+          test -s "$ARCHIVE"
+          assets=$(gh release view "$RELEASE_TAG" --json assets)
+          exists=$(jq -r --arg name "$ARCHIVE" 'any(.assets[]; .name == $name)' <<< "$assets")
+          if [[ "$exists" == true ]]; then
+            existing=$(mktemp -d)
+            trap 'rm -rf "$existing"' EXIT
+            gh release download "$RELEASE_TAG" --pattern "$ARCHIVE" --dir "$existing"
+            if ! cmp -s "$ARCHIVE" "$existing/$ARCHIVE"; then
+              echo "::error::A different asset already exists with this filename; refusing to replace it"
+              exit 1
+            fi
+            echo "Identical GitHub Release asset already exists; skipping upload"
+          else
+            gh release upload "$RELEASE_TAG" "$ARCHIVE"
+          fi
 
       - name: Upload a new version of the Nexus main file
         uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2 # v1.0.0-beta.11
